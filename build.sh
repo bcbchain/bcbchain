@@ -1,5 +1,6 @@
 #!/bin/bash
 
+#如果编译时thirdparty出错，可能是因为thirdparty有更新，请删除thirdparty-master.zip文件重新编译
 if [ ! -f "../thirdparty-master.zip" ];then
   wget https://github.com/bcbchain/thirdparty/archive/master.zip -O ../thirdparty-master.zip 
 fi
@@ -10,9 +11,6 @@ fi
 
 cwd=`pwd`
 export GOPATH=${cwd}:${cwd}/../thirdparty-master
-
-
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 
 
 echo go install blockchain
 go install blockchain/cmd/bcchain
