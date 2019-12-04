@@ -2,7 +2,6 @@ package adapter
 
 import (
 	"blockchain/burrow"
-	"blockchain/common/statedbhelper"
 	"blockchain/smcrunctl/controllermgr"
 	"blockchain/smcrunctl/invokermgr"
 	"blockchain/types"
