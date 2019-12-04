@@ -1,0 +1,4 @@
+{
+  "chainID": "local",
+  "watchIPs": "127.0.0.1:46657"
+}

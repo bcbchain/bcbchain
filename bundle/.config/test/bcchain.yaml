@@ -1,0 +1,25 @@
+
+
+# New takes a remote endpoint in the form tcp://<host>:<port>
+# and the websocket path (which always seems to be "/websocket")
+
+# 服务监听配置
+address: "tcp://0.0.0.0:46658"
+abci: "socket"
+queryDBAddress: "0.0.0.0:46666"
+
+# 日志相关配置
+logLevel:   "debug"
+logScreen:  false
+logFile:    true
+logAsync:   true
+logFileSize: 20000000
+
+# 状态库配置
+dbName: ".appstate"
+dbIp: "127.0.0.1"
+dbPort: "8888"
+
+# docker 相关配置
+# docker 没有发生交易的容器最多存活时间，单位：分
+containerTimeout: 30

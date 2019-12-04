@@ -1,0 +1,229 @@
+{
+  "app_hash": "",
+  "app_state": {
+    "token": {
+      "address": "bcbtestAtEJ4dTejwJReKA4dtFjy9cQ3HzR6jbwF",
+      "owner": "bcbtestQ76Ao8wv8hiP4QgijgHTuZNKPyQJe3dmp",
+      "version": "",
+      "name": "BCBT",
+      "symbol": "BCBT",
+      "totalSupply": 5000000000000000000,
+      "addSupplyEnabled": false,
+      "burnEnabled": false,
+      "gasPrice": 2500
+    },
+    "rewardStrategy": [
+      {
+        "name": "validators",
+        "rewardPercent": "20.00",
+        "address": ""
+      },
+      {
+        "name": "r_d_team",
+        "rewardPercent": "30.00",
+        "address": "bcbtestK1DhB6n2cKknA8M3PKrAToodkGzzQRGut"
+      },
+      {
+        "name": "bonus_bcbt",
+        "rewardPercent": "20.00",
+        "address": "bcbtestDLbuX4gpVrEotexBZwVctpJEmVuKA6ssR"
+      },
+      {
+        "name": "bonus_token",
+        "rewardPercent": "30.00",
+        "address": "bcbtestC4rfdEfUtjiCw8UaUTp3N2BjTyD7LjoWi"
+      }
+    ],
+    "contracts": [
+      {
+        "name": "system",
+        "address": "bcbtest88P6KfaRtQLwgnAwK24peXRV28r72u7F7",
+        "owner": "bcbtestQ76Ao8wv8hiP4QgijgHTuZNKPyQJe3dmp",
+        "version": "",
+        "codeHash": "10699B5A4EF54E0DAD103D194B21A439C575E1C79F9974E24B0A5CB216C8B046",
+        "effectHeight": 1,
+        "loseHeight": 0,
+        "methods": [
+          {
+            "methodId": "1b0b7ce1",
+            "prototype": "NewValidator(string,smc.PubKey,smc.Address,uint64)smc.Error",
+            "gas": 50000
+          },
+          {
+            "methodId": "bcc890f0",
+            "prototype": "SetPower(smc.PubKey,uint64)smc.Error",
+            "gas": 20000
+          },
+          {
+            "methodId": "757a5721",
+            "prototype": "SetRewardAddr(smc.PubKey,smc.Address)smc.Error",
+            "gas": 20000
+          },
+          {
+            "methodId": "52d1c625",
+            "prototype": "ForbidInternalContract(smc.Address,uint64)smc.Error",
+            "gas": 50000
+          },
+          {
+            "methodId": "48c26f01",
+            "prototype": "DeployInternalContract(string,string,[]string,[]uint64,smc.Hash,uint64)(smc.Address,smc.Error)",
+            "gas": 50000
+          },
+          {
+            "methodId": "92622878",
+            "prototype": "SetRewardStrategy(string,uint64)smc.Error",
+            "gas": 50000
+          }
+        ]
+      },
+      {
+        "name": "token-basic",
+        "address": "bcbtestAtEJ4dTejwJReKA4dtFjy9cQ3HzR6jbwF",
+        "owner": "bcbtestQ76Ao8wv8hiP4QgijgHTuZNKPyQJe3dmp",
+        "version": "",
+        "codeHash": "695756CBF7FEE12284B9E585EB8C8561D3C5EF6EBA62A00F5E76CE2DE73CE66C",
+        "effectHeight": 1,
+        "loseHeight": 0,
+        "methods": [
+          {
+            "methodId": "af0228bc",
+            "prototype": "Transfer(smc.Address,big.Int)smc.Error",
+            "gas": 500
+          },
+          {
+            "methodId": "cc50053d",
+            "prototype": "SetGasPrice(uint64)smc.Error",
+            "gas": 2000
+          },
+          {
+            "methodId": "adcf5578",
+            "prototype": "SetGasBasePrice(uint64)smc.Error",
+            "gas": 2000
+          }
+        ]
+      },
+      {
+        "name": "token-issue",
+        "address": "bcbtestNrKPecPmVQjgAgHzjnFEBG3xLaFaDqLRT",
+        "owner": "bcbtestQ76Ao8wv8hiP4QgijgHTuZNKPyQJe3dmp",
+        "version": "",
+        "codeHash": "BB31A29ABB1CF540B61ACFC1DBD30E6B509D1FCC794DC463EF9760D013E84241",
+        "effectHeight": 1,
+        "loseHeight": 0,
+        "methods": [
+          {
+            "methodId": "825b55bb",
+            "prototype": "NewToken(string,string,big.Int,bool,bool,uint64)(smc.Address,smc.Error)",
+            "gas": 20000
+          }
+        ]
+      },
+      {
+        "name": "token-templet",
+        "address": "bcbtestFrQS3bcx2t22WHBvHmjrxx9kFwwbFRHUm",
+        "owner": "bcbtestQ76Ao8wv8hiP4QgijgHTuZNKPyQJe3dmp",
+        "version": "",
+        "codeHash": "D567074DB12E331B3BAFBE3401E0351E257805BF75FD576CFD2DBDE6C13CB9EA",
+        "effectHeight": 1,
+        "loseHeight": 0,
+        "methods": [
+          {
+            "methodId": "af0228bc",
+            "prototype": "Transfer(smc.Address,big.Int)smc.Error",
+            "gas": 600
+          },
+          {
+            "methodId": "b8f4b0d8",
+            "prototype": "BatchTransfer([]smc.Address,big.Int)smc.Error",
+            "gas": 6000
+          },
+          {
+            "methodId": "4a439c44",
+            "prototype": "AddSupply(big.Int)smc.Error",
+            "gas": 2400
+          },
+          {
+            "methodId": "5a0e0fa3",
+            "prototype": "Burn(big.Int)smc.Error",
+            "gas": 2400
+          },
+          {
+            "methodId": "a6be2c35",
+            "prototype": "SetOwner(smc.Address)smc.Error",
+            "gas": 2400
+          },
+          {
+            "methodId": "cc50053d",
+            "prototype": "SetGasPrice(uint64)smc.Error",
+            "gas": 2400
+          },
+          {
+            "methodId": "54868e97",
+            "prototype": "UdcCreate(smc.Address,big.Int,string)(smc.Hash,smc.Error)",
+            "gas": 2400
+          },
+          {
+            "methodId": "d0ef0ff4",
+            "prototype": "UdcTransfer(smc.Hash,smc.Address,big.Int)(smc.Hash,smc.Hash,smc.Error)",
+            "gas": 2400
+          },
+          {
+            "methodId": "1a14fbcd",
+            "prototype": "UdcMature(smc.Hash)smc.Error",
+            "gas": 2400
+          }
+        ]
+      },
+      {
+        "name": "token-trade",
+        "address": "bcbtestEj9Up1VnpPLXRQ62cyq5F5GC22wUY12uT",
+        "owner": "bcbtestQ76Ao8wv8hiP4QgijgHTuZNKPyQJe3dmp",
+        "version": "",
+        "codeHash": "E30D0593ECC2CEF67BFD88234203ACB8F238CF88B46976730AED16BD5A3DBF53",
+        "effectHeight": 1,
+        "loseHeight": 0,
+        "methods": [
+          {
+            "methodId": "4b041bab",
+            "prototype": "DealExchange(string,string)smc.Error",
+            "gas": 2000
+          }
+        ]
+      }
+    ]
+  },
+  "chain_id": "bcbtest",
+  "genesis_time": "2018-11-16T18:21:52.7220726+08:00",
+  "validators": [
+    {
+      "name": "tearth",
+      "reward_addr": "bcbtest82JVui6oqz6YuP3NciLfxEur99y7VpHtR",
+      "power": 10
+    },
+    {
+      "name": "tvenus",
+      "reward_addr": "bcbtestBVbSrari2k6dtTgH9pmH8gy6CkAtUzyva",
+      "power": 10
+    },
+    {
+      "name": "tjupiter",
+      "reward_addr": "bcbtest3Y3WpgV692B1ajtBo84w6StVmCJCwAXqR",
+      "power": 10
+    },
+    {
+      "name": "tmercury",
+      "reward_addr": "bcbtestNiDxtNSsz8Peuo14XaRC2qSnVSJWZw4Nd",
+      "power": 10
+    },
+    {
+      "name": "taltair",
+      "reward_addr": "bcbtestMVUjHFVqD15SCNovu9HUyM9uhALuuMQaS",
+      "power": 10
+    },
+    {
+      "name": "tmars",
+      "reward_addr": "bcbtestFpVJe5ERCwLr3VLwebk2VH1LomG4VWaVH",
+      "power": 10
+    }
+  ]
+}

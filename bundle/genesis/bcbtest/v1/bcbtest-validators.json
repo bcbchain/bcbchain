@@ -1,0 +1,32 @@
+[
+  {
+    "name": "tearth",
+    "reward_addr": "bcbtest82JVui6oqz6YuP3NciLfxEur99y7VpHtR",
+    "power": 10
+  },
+  {
+    "name": "tvenus",
+    "reward_addr": "bcbtestBVbSrari2k6dtTgH9pmH8gy6CkAtUzyva",
+    "power": 10
+  },
+  {
+    "name": "tjupiter",
+    "reward_addr": "bcbtest3Y3WpgV692B1ajtBo84w6StVmCJCwAXqR",
+    "power": 10
+  },
+  {
+    "name": "tmercury",
+    "reward_addr": "bcbtestNiDxtNSsz8Peuo14XaRC2qSnVSJWZw4Nd",
+    "power": 10
+  },
+  {
+    "name": "taltair",
+    "reward_addr": "bcbtestMVUjHFVqD15SCNovu9HUyM9uhALuuMQaS",
+    "power": 10
+  },
+  {
+    "name": "tmars",
+    "reward_addr": "bcbtestFpVJe5ERCwLr3VLwebk2VH1LomG4VWaVH",
+    "power": 10
+  }
+]

@@ -1,0 +1,58 @@
+[
+  {
+    "name": "node1",
+    "reward_addr": "testJKGDVgPfXibLV5ZaWh27eMskzsXCFWYp",
+    "power": 10,
+    "listen_port": 46656,
+    "announce": "192.168.1.101:46656",
+    "public": "192.168.1.101:46657",
+    "ip_in": "192.168.1.101",
+    "ip_out": "192.168.1.101",
+    "ip_priv": "192.168.1.101",
+    "apps": [
+      "tcp://127.0.0.1:46658"
+    ]
+  },
+  {
+    "name": "node2",
+    "reward_addr": "testJPLEAHZLzqDirorEALCtm9K8GEaLWLPsE",
+    "power": 10,
+    "listen_port": 46656,
+    "announce": "192.168.1.102:46656",
+    "public": "192.168.1.102:46657",
+    "ip_in": "192.168.1.102",
+    "ip_out": "192.168.1.102",
+    "ip_priv": "192.168.1.102",
+    "apps": [
+      "tcp://127.0.0.1:46658"
+    ]
+  },
+  {
+    "name": "node3",
+    "reward_addr": "testHigHdZV32KTysm8rGLCG6xmKFRm2agvEJ",
+    "power": 10,
+    "listen_port": 46656,
+    "announce": "192.168.1.103:46656",
+    "public": "192.168.1.103:46657",
+    "ip_in": "192.168.1.103",
+    "ip_out": "192.168.1.103",
+    "ip_priv": "192.168.1.103",
+    "apps": [
+      "tcp://127.0.0.1:46658"
+    ]
+  },
+  {
+    "name": "node4",
+    "reward_addr": "testGKWz4ajMqUUzQG2vQzJj7W2b2UZmBsB6x",
+    "power": 10,
+    "listen_port": 46656,
+    "announce": "192.168.1.104:46656",
+    "public": "192.168.1.104:46657",
+    "ip_in": "192.168.1.104",
+    "ip_out": "192.168.1.104",
+    "ip_priv": "192.168.1.104",
+    "apps": [
+      "tcp://127.0.0.1:46658"
+    ]
+  }
+]

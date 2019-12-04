@@ -1,0 +1,29 @@
+{
+  "token":{
+    "tokenName":"TEST",
+    "tokenSymbol":"TEST",
+    "totalSupply":2000000000000000000,
+    "addSupplyEnabled":false,
+    "burnEnabled":false,
+    "gasPrice":2500
+  },
+  "rewardStrategy":[
+    {
+      "name":"validators",
+      "rewardPercent":"20.00"
+    },
+    {
+      "name":"r_d_team",
+      "rewardPercent":"20.00"
+    },
+    {
+      "name":"bonus",
+      "rewardPercent":"30.00"
+    },
+    {
+      "name":"reserved",
+      "rewardPercent":"30.00"
+    }
+  ]
+}
+

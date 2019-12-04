@@ -1,0 +1,62 @@
+[
+  {
+    "name": "tearth-follower",
+    "listen_port": 37826,
+    "announce": "tearth-p2p.bcbchain.io:46656",
+    "public": "tearth.bcbchain.io",
+    "ip_priv": "172.16.30.140",
+    "apps": [
+      "tcp://172.16.30.139:46658"
+    ]
+  },
+  {
+    "name": "tvenus-follower",
+    "listen_port": 37826,
+    "announce": "tvenus-p2p.bcbchain.io:46656",
+    "public": "tvenus.bcbchain.io",
+    "ip_priv": "172.16.30.129",
+    "apps": [
+      "tcp://172.16.30.128:46658"
+    ]
+  },
+  {
+    "name": "tjupiter-follower",
+    "listen_port": 37826,
+    "announce": "tjupiter-p2p.bcbchain.io:46656",
+    "public": "tjupiter.bcbchain.io",
+    "ip_priv": "172.16.30.109",
+    "apps": [
+      "tcp://172.16.30.108:46658"
+    ]
+  },
+  {
+    "name": "tmercury-follower",
+    "listen_port": 37826,
+    "announce": "tmercury-p2p.bcbchain.io:46656",
+    "public": "tmercury.bcbchain.io",
+    "ip_priv": "172.16.140.107",
+    "apps": [
+      "tcp://172.16.140.108:46658"
+    ]
+  },
+  {
+    "name": "taltair-follower",
+    "listen_port": 37826,
+    "announce": "taltair-p2p.bcbchain.io:46656",
+    "public": "taltair.bcbchain.io",
+    "ip_priv": "172.18.136.107",
+    "apps": [
+      "tcp://172.18.136.108:46658"
+    ]
+  },
+  {
+    "name": "tmars-follower",
+    "listen_port": 37826,
+    "announce": "tmars-p2p.bcbchain.io:46656",
+    "public": "tmars.bcbchain.io",
+    "ip_priv": "192.168.137.245",
+    "apps": [
+      "tcp://192.168.137.237:46658"
+    ]
+  }
+]

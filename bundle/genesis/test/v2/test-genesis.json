@@ -1,0 +1,177 @@
+{
+  "chain_id": "test",
+  "chain_version": "2",
+  "genesis_time": "2019-12-04T16:20:44.6951794+08:00",
+  "app_hash": "",
+  "app_state": {
+    "organization": "genesis",
+    "token": {
+      "address": "",
+      "owner": "testLMMGn2NCZ2WkXv7AhiQPgEQEx5KeqJBfB",
+      "name": "TEST",
+      "symbol": "TEST",
+      "totalSupply": 2000000000000000000,
+      "addSupplyEnabled": false,
+      "burnEnabled": false,
+      "gasPrice": 2500
+    },
+    "rewardStrategy": [
+      {
+        "name": "validators",
+        "rewardPercent": "20.00",
+        "address": ""
+      },
+      {
+        "name": "r_d_team",
+        "rewardPercent": "20.00",
+        "address": "testYvBLo6Eh8vZKppJnqJGNFWRLzjmxsuWo"
+      },
+      {
+        "name": "bonus",
+        "rewardPercent": "30.00",
+        "address": "testPdV2xqipzeKtx9fkRCkWaZ7rNB6sDLyoG"
+      },
+      {
+        "name": "reserved",
+        "rewardPercent": "30.00",
+        "address": "testDfzucuVwnug5243aHb61vf2s9AqERtzBa"
+      }
+    ],
+    "contracts": [
+      {
+        "name": "governance",
+        "version": "2.1",
+        "code": "governance-2.1.tar.gz",
+        "codeHash": "6ef0bdb1e26ad057cd25d863c538be53ed576b986c31aa66e73450e8e271678c",
+        "codeDevSig": {
+          "pubkey": "5e8339cb1a5cce65602fd4f57e115905348f7e83bcbe38dd77694dbe1f8903c9",
+          "signature": "C755158CBB594882E7DC2AD4C773E3C78BE5272427988D9C3996C833ACFF6CDC5B2D15A7A54389E4F4B561FB94A23A9BD36EDC55C65A4FBA0EDCD2D034F03308"
+        },
+        "codeOrgSig": {
+          "pubkey": "0c27b3396bdc1b486af51e84accbdd23a0d55a49c34fa51cf0ed6aedccf984d4",
+          "signature": "B56431267C7846E71D45FD96037E9B80E1D593CB6902FB02702FF3F9C28B2928952953CA6EE8D7C0F350C20E98F03ED06B52BC9CAE7AD82F37B32BABAE42250A"
+        }
+      },
+      {
+        "name": "ibc",
+        "version": "2.1",
+        "code": "ibc-2.1.tar.gz",
+        "codeHash": "c69adeeac77e725da525f570188940e56498d2ec83e4e483c1e56e275240bfe4",
+        "codeDevSig": {
+          "pubkey": "5e8339cb1a5cce65602fd4f57e115905348f7e83bcbe38dd77694dbe1f8903c9",
+          "signature": "AA1A50143CAB1F4DCC105A185D43F8D6DCDE0A62D838BCE6CEC59A020446C74F59B7902A80828876E0CAEB06424900DC82F876EA71234370FC0D7C33CAEC030E"
+        },
+        "codeOrgSig": {
+          "pubkey": "0c27b3396bdc1b486af51e84accbdd23a0d55a49c34fa51cf0ed6aedccf984d4",
+          "signature": "C61599B30C6B074A047179A0BC8E035D40F7741B8532B2B6B897B6F4CB262559851A736ED639352E949ECF41F462B9B2BEF6155F70DAE9934CE888755E294B0B"
+        }
+      },
+      {
+        "name": "mining",
+        "version": "2.0",
+        "code": "mining-2.0.tar.gz",
+        "codeHash": "6d96a0ec9cf22fe20dfb26c0bd92900d487dfad9b832c6b99d8c32be2155d666",
+        "codeDevSig": {
+          "pubkey": "5e8339cb1a5cce65602fd4f57e115905348f7e83bcbe38dd77694dbe1f8903c9",
+          "signature": "41278731DFE16D5784E54B2343A2101ED0FCA980AD1BFA85B2D80B7363DE454BA921C13D9866E23F7A1E4FF936331EE5472351D5537FD5EBEC5A5CBF1FCC740C"
+        },
+        "codeOrgSig": {
+          "pubkey": "0c27b3396bdc1b486af51e84accbdd23a0d55a49c34fa51cf0ed6aedccf984d4",
+          "signature": "3124A1B4BC6284CA8811E6ECD221CE65F367431499EE9727B10A06AA91385C3C748CB835AA121B31A4AEDB162CE96F6939CC7D192223947F8012290404E1F805"
+        }
+      },
+      {
+        "name": "netgovernance",
+        "version": "2.1",
+        "code": "netgovernance-2.1.tar.gz",
+        "codeHash": "65d750483fa121b1de1981b8543dbac13729769a7a4baaa19e05a440c3bb1b27",
+        "codeDevSig": {
+          "pubkey": "5e8339cb1a5cce65602fd4f57e115905348f7e83bcbe38dd77694dbe1f8903c9",
+          "signature": "6A5865683E573C4E8B05E6E33406463B8F45D78B53AA5898E194DFFEE321A7ABD7796497CB08590869D1F6B343B65594E3165464CEA8E3E84ECECD866A7F2409"
+        },
+        "codeOrgSig": {
+          "pubkey": "0c27b3396bdc1b486af51e84accbdd23a0d55a49c34fa51cf0ed6aedccf984d4",
+          "signature": "6AB035810D0A9DE05EE392B6156ABE1424B15C502B039FDD53CAC4CCD347BAFE68AE91748F42DD3BDFB38B7A0AC7106A7E4AFAA75954FAA3BD883F5F27055202"
+        }
+      },
+      {
+        "name": "organization",
+        "version": "2.1",
+        "code": "organization-2.1.tar.gz",
+        "codeHash": "461dae488b88848e052eea93f1b3fd579f56c0afd5c8f17a5e0b068b55a5de26",
+        "codeDevSig": {
+          "pubkey": "5e8339cb1a5cce65602fd4f57e115905348f7e83bcbe38dd77694dbe1f8903c9",
+          "signature": "0A01E46E08E0B9AB2C0B5207E9E3ABB3A38348EF5DAB7B0025144D66C990394F72BDEA562FCB4DBAAC8AC4E03CE8EA80112CFD1A8A56DEAEB4BD137FEE704207"
+        },
+        "codeOrgSig": {
+          "pubkey": "0c27b3396bdc1b486af51e84accbdd23a0d55a49c34fa51cf0ed6aedccf984d4",
+          "signature": "A5FEEBF52657B31373048FAAA72E6475C3F3A369C8564D3FFBB64A2A4D9C64F109C0151E76CF40C2ECAE83A125547DFCE66589D031C6FE4C53AF8FEC3F74C00B"
+        }
+      },
+      {
+        "name": "smartcontract",
+        "version": "2.1",
+        "code": "smartcontract-2.1.tar.gz",
+        "codeHash": "9c1c26ddacc62c811fec16655e72b0985c694013a8fc3bed2d113331ddf91bc4",
+        "codeDevSig": {
+          "pubkey": "5e8339cb1a5cce65602fd4f57e115905348f7e83bcbe38dd77694dbe1f8903c9",
+          "signature": "4E69DD23B246F079A60AB38BA34E771495E285BAC7044463A690CF331B560EF0E4ABC2CB5D47A7989868CAFD279DAF3DFB98FC0D98B0045D6C4C4ACDD52A550F"
+        },
+        "codeOrgSig": {
+          "pubkey": "0c27b3396bdc1b486af51e84accbdd23a0d55a49c34fa51cf0ed6aedccf984d4",
+          "signature": "3B2528878287688CC20E8224BEE2B25854B638CBF3BAB2C0423900DCC75D8C56578DB0AD89B172BA1ADAE91141826E85E0AED16DB675B51CE3819965E7839504"
+        }
+      },
+      {
+        "name": "token-basic",
+        "version": "2.1",
+        "code": "token-basic-2.1.tar.gz",
+        "codeHash": "368bea7f8e325d6ccda58d6eac813ffe08a56be7789c516c34351deae8874c77",
+        "codeDevSig": {
+          "pubkey": "5e8339cb1a5cce65602fd4f57e115905348f7e83bcbe38dd77694dbe1f8903c9",
+          "signature": "3FC80E8FE9BC30173F15A8B4B909A3D4F5244F91E7A74888D2E218B6072251A75C38835E5FF8CB711FACF0CE7492B10F2A961EDB7C976E9CEF56FE8F87B85D09"
+        },
+        "codeOrgSig": {
+          "pubkey": "0c27b3396bdc1b486af51e84accbdd23a0d55a49c34fa51cf0ed6aedccf984d4",
+          "signature": "7F20C6BF6B771D6EF7BA852E2DBCA8ED3BF97F9CA686D0329C8C128B75908E5D7F31CE1A3CD4D88935CF819C00DF5BEB47E3197813FBDD0C35CEF67D98A31E04"
+        }
+      },
+      {
+        "name": "token-issue",
+        "version": "2.1",
+        "code": "token-issue-2.1.tar.gz",
+        "codeHash": "33ad016000f8df1481e102bf558028270b5eae67e7859e62eafdb8fad087bc7e",
+        "codeDevSig": {
+          "pubkey": "5e8339cb1a5cce65602fd4f57e115905348f7e83bcbe38dd77694dbe1f8903c9",
+          "signature": "3A3FAA25A51F41BE1058D31E2B203569AEB4B7A822490C28B6AD4094BA879FA23B91AF7CB86D9264A100F597D9E9A166403EB412B63A112E727FEC22955B3807"
+        },
+        "codeOrgSig": {
+          "pubkey": "0c27b3396bdc1b486af51e84accbdd23a0d55a49c34fa51cf0ed6aedccf984d4",
+          "signature": "00539831BFDB788128F9E64A2F1F4B87FC9AECA847652C8D9165896CA05A83ED5EB06D3CA37915C4FE651FB443CFD210CD35873044BC015CE5DC4611B3054C0D"
+        }
+      }
+    ]
+  },
+  "validators": [
+    {
+      "name": "node1",
+      "reward_addr": "testJKGDVgPfXibLV5ZaWh27eMskzsXCFWYp",
+      "power": 10
+    },
+    {
+      "name": "node2",
+      "reward_addr": "testJPLEAHZLzqDirorEALCtm9K8GEaLWLPsE",
+      "power": 10
+    },
+    {
+      "name": "node3",
+      "reward_addr": "testHigHdZV32KTysm8rGLCG6xmKFRm2agvEJ",
+      "power": 10
+    },
+    {
+      "name": "node4",
+      "reward_addr": "testGKWz4ajMqUUzQG2vQzJj7W2b2UZmBsB6x",
+      "power": 10
+    }
+  ]
+}

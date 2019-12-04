@@ -1,0 +1,16 @@
+[
+  {
+    "name": "local",
+    "reward_addr": "local8LtT8AonWgJ8nMCEdAR5UGrbRfUmuoeiz",
+    "power": 10,
+    "listen_port": 46656,
+    "announce": "127.0.0.1:46656",
+    "public": "127.0.0.1:46657",
+    "ip_in": "127.0.0.1",
+    "ip_out": "127.0.0.1",
+    "ip_priv": "127.0.0.1",
+    "apps": [
+      "tcp://127.0.0.1:46658"
+    ]
+  }
+]

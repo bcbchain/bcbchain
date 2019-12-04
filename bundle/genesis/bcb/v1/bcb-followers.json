@@ -1,0 +1,62 @@
+[
+  {
+    "name": "earth-follower",
+    "listen_port": 37826,
+    "announce": "113.10.236.36:37826",
+    "public": "earth.bcbchain.io",
+    "ip_priv": "172.16.30.136",
+    "apps": [
+      "tcp://172.16.30.135:46658"
+    ]
+  },
+  {
+    "name": "venus-follower",
+    "listen_port": 37826,
+    "announce": "182.16.114.90:37826",
+    "public": "venus.bcbchain.io",
+    "ip_priv": "172.16.30.125",
+    "apps": [
+      "tcp://172.16.30.124:46658"
+    ]
+  },
+  {
+    "name": "jupiter-follower",
+    "listen_port": 37826,
+    "announce": "148.66.11.245:37826",
+    "public": "jupiter.bcbchain.io",
+    "ip_priv": "172.16.30.105",
+    "apps": [
+      "tcp://172.16.30.104:46658"
+    ]
+  },
+  {
+    "name": "mercury-follower",
+    "listen_port": 37826,
+    "announce": "113.10.159.193:37826",
+    "public": "mercury.bcbchain.io",
+    "ip_priv": "172.16.140.103",
+    "apps": [
+      "tcp://172.16.140.104:46658"
+    ]
+  },
+  {
+    "name": "mars-follower",
+    "listen_port": 37826,
+    "announce": "125.208.8.244:37826",
+    "public": "mars.bcbchain.io",
+    "ip_priv": "192.168.137.244",
+    "apps": [
+      "tcp://192.168.137.229:46658"
+    ]
+  },
+  {
+    "name": "pluto-follower",
+    "listen_port": 37826,
+    "announce": "103.5.193.38:37826",
+    "public": "pluto.bcbchain.io",
+    "ip_priv": "192.168.137.38",
+    "apps": [
+      "tcp://192.168.137.39:46658"
+    ]
+  }
+]

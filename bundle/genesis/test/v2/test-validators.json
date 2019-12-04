@@ -1,0 +1,22 @@
+[
+  {
+    "name": "node1",
+    "reward_addr": "testJKGDVgPfXibLV5ZaWh27eMskzsXCFWYp",
+    "power": 10
+  },
+  {
+    "name": "node2",
+    "reward_addr": "testJPLEAHZLzqDirorEALCtm9K8GEaLWLPsE",
+    "power": 10
+  },
+  {
+    "name": "node3",
+    "reward_addr": "testHigHdZV32KTysm8rGLCG6xmKFRm2agvEJ",
+    "power": 10
+  },
+  {
+    "name": "node4",
+    "reward_addr": "testGKWz4ajMqUUzQG2vQzJj7W2b2UZmBsB6x",
+    "power": 10
+  }
+]

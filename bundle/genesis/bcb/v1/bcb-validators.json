@@ -1,0 +1,32 @@
+[
+  {
+    "name": "earth",
+    "reward_addr": "bcb5xjCpYJrKkyM3kgo5Jk8Pge7XDTwuvSUm",
+    "power": 10
+  },
+  {
+    "name": "venus",
+    "reward_addr": "bcb5rzgE1tSJbJuegEj4vbAkotmwRkxwiSyV",
+    "power": 10
+  },
+  {
+    "name": "jupiter",
+    "reward_addr": "bcb3JivtUWiDG48dbWDvFBUHDL8veB7JvQvS",
+    "power": 10
+  },
+  {
+    "name": "mercury",
+    "reward_addr": "bcbKG7Y7hWLhjxiBNZ8UBgja4ocLcSHKW4b4",
+    "power": 10
+  },
+  {
+    "name": "mars",
+    "reward_addr": "bcbAb65XuCz8bWHB1ittqMQSRyLvDmb74KRB",
+    "power": 10
+  },
+  {
+    "name": "pluto",
+    "reward_addr": "bcbCfciTQNLQGwRWadxXg6ms8dBguP5sooX8",
+    "power": 10
+  }
+]

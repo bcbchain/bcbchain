@@ -1,0 +1,17 @@
+[Unit]
+Description=BlockChain tendermint core daemon
+Requires=network-online.target
+After=network-online.target
+
+[Service]
+Environment="TMHOME=/etc/tmcore"
+Restart=on-failure
+User=tmcore
+Group=tmcore
+ExecStart=/usr/local/tmcore/bin/run.sh
+ExecReload=/usr/local/tmcore/bin/run.sh restart
+ExecStop=/usr/local/tmcore/bin/run.sh stop
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

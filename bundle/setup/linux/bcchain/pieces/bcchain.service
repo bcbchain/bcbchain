@@ -1,0 +1,17 @@
+[Unit]
+Description=BlockChain application daemon
+Requires=network-online.target
+After=network-online.target
+
+[Service]
+Environment="TMHOME=/home/bcchain"
+Restart=on-failure
+User=bcchain
+Group=bcchain
+ExecStart=/usr/local/bcchain/bin/runApp.sh
+ExecReload=/usr/local/bcchain/bin/runApp.sh restart
+ExecStop=/usr/local/bcchain/bin/runApp.sh stop
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

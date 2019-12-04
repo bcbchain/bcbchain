@@ -1,0 +1,204 @@
+{
+  "app_hash": "",
+  "app_state": {
+    "token": {
+      "address": "localAJrbk6Wdf7TCbunrXXS5kKvbWVszhC1TA",
+      "owner": "localETK7Zh9hNSPrEKdmCgnHDtFPatcs9WwVL",
+      "version": "",
+      "name": "LOC",
+      "symbol": "LOC",
+      "totalSupply": 2000000000000000000,
+      "addSupplyEnabled": false,
+      "burnEnabled": false,
+      "gasPrice": 2500
+    },
+    "rewardStrategy": [
+      {
+        "name": "validators",
+        "rewardPercent": "20.00",
+        "address": ""
+      },
+      {
+        "name": "r_d_team",
+        "rewardPercent": "20.00",
+        "address": "localEmmLk4GiJCkZNZcHhTCXihEZoLJdD4oQD"
+      },
+      {
+        "name": "bonus",
+        "rewardPercent": "30.00",
+        "address": "localHYDwRSoNEyCsZ8KYavyRBZsGHD7iLxjnX"
+      },
+      {
+        "name": "reserved",
+        "rewardPercent": "30.00",
+        "address": "localzVt3pfe75cuVdvwzZLkASQsKc3bf93fi"
+      }
+    ],
+    "contracts": [
+      {
+        "name": "system",
+        "address": "local9ge366rtqV9BHqNwn7fFgA8XbDQmJGZqE",
+        "owner": "localETK7Zh9hNSPrEKdmCgnHDtFPatcs9WwVL",
+        "version": "",
+        "codeHash": "BE6DC61A323C4A027337F181CEBB0BE105C5530E974ED7573FA86DAC94FDC347",
+        "effectHeight": 1,
+        "loseHeight": 0,
+        "methods": [
+          {
+            "methodId": "1b0b7ce1",
+            "prototype": "NewValidator(string,smc.PubKey,smc.Address,uint64)smc.Error",
+            "gas": 50000
+          },
+          {
+            "methodId": "bcc890f0",
+            "prototype": "SetPower(smc.PubKey,uint64)smc.Error",
+            "gas": 20000
+          },
+          {
+            "methodId": "757a5721",
+            "prototype": "SetRewardAddr(smc.PubKey,smc.Address)smc.Error",
+            "gas": 20000
+          },
+          {
+            "methodId": "52d1c625",
+            "prototype": "ForbidInternalContract(smc.Address,uint64)smc.Error",
+            "gas": 50000
+          },
+          {
+            "methodId": "48c26f01",
+            "prototype": "DeployInternalContract(string,string,[]string,[]uint64,smc.Hash,uint64)(smc.Address,smc.Error)",
+            "gas": 50000
+          },
+          {
+            "methodId": "92622878",
+            "prototype": "SetRewardStrategy(string,uint64)smc.Error",
+            "gas": 50000
+          }
+        ]
+      },
+      {
+        "name": "token-basic",
+        "address": "localAJrbk6Wdf7TCbunrXXS5kKvbWVszhC1TA",
+        "owner": "localETK7Zh9hNSPrEKdmCgnHDtFPatcs9WwVL",
+        "version": "",
+        "codeHash": "BF463D47763A9430DFD5AE2FBCF02BEABE44DD2C40BA1FBECEC9CF5A4EFA3FE5",
+        "effectHeight": 1,
+        "loseHeight": 0,
+        "methods": [
+          {
+            "methodId": "af0228bc",
+            "prototype": "Transfer(smc.Address,big.Int)smc.Error",
+            "gas": 500
+          },
+          {
+            "methodId": "cc50053d",
+            "prototype": "SetGasPrice(uint64)smc.Error",
+            "gas": 2000
+          },
+          {
+            "methodId": "adcf5578",
+            "prototype": "SetGasBasePrice(uint64)smc.Error",
+            "gas": 2000
+          }
+        ]
+      },
+      {
+        "name": "token-issue",
+        "address": "local5sAkG9xgzjuuhQn3FVf8K3FCrk5RAtab6",
+        "owner": "localETK7Zh9hNSPrEKdmCgnHDtFPatcs9WwVL",
+        "version": "",
+        "codeHash": "22D14A57C3D0F3388E93501E3D4636E38D32FA4EBBA054BA7674CAC9B6EB0ED6",
+        "effectHeight": 1,
+        "loseHeight": 0,
+        "methods": [
+          {
+            "methodId": "825b55bb",
+            "prototype": "NewToken(string,string,big.Int,bool,bool,uint64)(smc.Address,smc.Error)",
+            "gas": 20000
+          }
+        ]
+      },
+      {
+        "name": "token-templet",
+        "address": "localGVokyNHdKqkt79b2Dyxbh91Ky5GXWbA3q",
+        "owner": "localETK7Zh9hNSPrEKdmCgnHDtFPatcs9WwVL",
+        "version": "",
+        "codeHash": "C0F50A2AB7E18D4879F41068224D4BE852F12B178D75F529DDD3E80589AEC2F9",
+        "effectHeight": 1,
+        "loseHeight": 0,
+        "methods": [
+          {
+            "methodId": "af0228bc",
+            "prototype": "Transfer(smc.Address,big.Int)smc.Error",
+            "gas": 600
+          },
+          {
+            "methodId": "b8f4b0d8",
+            "prototype": "BatchTransfer([]smc.Address,big.Int)smc.Error",
+            "gas": 6000
+          },
+          {
+            "methodId": "4a439c44",
+            "prototype": "AddSupply(big.Int)smc.Error",
+            "gas": 2400
+          },
+          {
+            "methodId": "5a0e0fa3",
+            "prototype": "Burn(big.Int)smc.Error",
+            "gas": 2400
+          },
+          {
+            "methodId": "a6be2c35",
+            "prototype": "SetOwner(smc.Address)smc.Error",
+            "gas": 2400
+          },
+          {
+            "methodId": "cc50053d",
+            "prototype": "SetGasPrice(uint64)smc.Error",
+            "gas": 2400
+          },
+          {
+            "methodId": "54868e97",
+            "prototype": "UdcCreate(smc.Address,big.Int,string)(smc.Hash,smc.Error)",
+            "gas": 2400
+          },
+          {
+            "methodId": "d0ef0ff4",
+            "prototype": "UdcTransfer(smc.Hash,smc.Address,big.Int)(smc.Hash,smc.Hash,smc.Error)",
+            "gas": 2400
+          },
+          {
+            "methodId": "1a14fbcd",
+            "prototype": "UdcMature(smc.Hash)smc.Error",
+            "gas": 2400
+          }
+        ]
+      },
+      {
+        "name": "token-trade",
+        "address": "localGDnZKiVYfudRTxuHoctvNhHirrjWuZYed",
+        "owner": "localETK7Zh9hNSPrEKdmCgnHDtFPatcs9WwVL",
+        "version": "",
+        "codeHash": "43A15EC506F3864126E78FD3E1A265D9EAF5D436E776C9B0200D77E57B76B7ED",
+        "effectHeight": 1,
+        "loseHeight": 0,
+        "methods": [
+          {
+            "methodId": "4b041bab",
+            "prototype": "DealExchange(string,string)smc.Error",
+            "gas": 2000
+          }
+        ]
+      }
+    ]
+  },
+  "chain_id": "local",
+  "genesis_time": "2018-07-14T14:43:53.1778867+08:00",
+  "validators": [
+    {
+      "name": "local",
+      "reward_addr": "local8LtT8AonWgJ8nMCEdAR5UGrbRfUmuoeiz",
+      "power": 10
+    }
+  ]
+}
