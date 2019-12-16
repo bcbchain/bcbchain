@@ -2,6 +2,7 @@ package core
 
 import (
 	"common/jsoniter"
+	"github.com/pkg/errors"
 	"io/ioutil"
 	"os"
 	"path"
@@ -37,6 +38,10 @@ func parseConfig() { // 相当不 DRY， 避免循环引用又撸一遍，有空
 }
 
 func GetGenesisPkg() (*core_types.ResultConfFile, error) {
+	if completeStarted == false {
+		return nil, errors.New("wait application complete started")
+	}
+
 	lock.Lock()
 	defer lock.Unlock()
 

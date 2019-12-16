@@ -138,10 +138,13 @@ type IBlockChainHelper interface {
 	CheckAddress(addr types.Address) error                                       //根据当前链chainID检查地址是否合法
 	CheckAddressEx(chainID string, addr types.Address) error                     //根据给定chainID检查地址是否合法
 
-	GetBlock(height int64) IBlock                   //根据高度读取区块信息
-	GetChainID(address types.Address) string        // 从地址中获取链ID
-	GetMainChainID() string                         // 从当前链ID中获取主链ID
-	FormatTime(seconds int64, layout string) string //输出格式化时间
+	GetBlock(height int64) IBlock            //根据高度读取区块信息
+	GetChainID(address types.Address) string // 从地址中获取链ID
+	GetMainChainID() string                  // 从当前链ID中获取主链ID
+
+	// time
+	FormatTime(seconds int64, layout string) string // 输出格式化时间
+	ParseTime(layout, value string) (int64, error)  // 输出格式化时间
 }
 
 // IBuildHelper the interface for build helper

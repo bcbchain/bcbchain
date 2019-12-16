@@ -10,7 +10,6 @@ const (
 	TB_Cancellation = "token-basic-cancellation-1"
 	UPGRADE1TO2     = "upgrade1to2"
 	TokenBYB        = "token-byb"
-	BlackList       = "black-list"
 	TAC             = "transferAgency"
 	TB_Team         = "token-basic-team"
 	TB_Foundation   = "token-basic-foundation"
@@ -50,10 +49,6 @@ const (
 	BYBChangeChromoOwnerShip = "ChangeChromoOwnership(smc.Chromo,smc.Address)smc.Error"
 	BYBTransfer              = "Transfer(smc.Address,big.Int)smc.Error"
 	BYBTransferByChromo      = "TransferByChromo(smc.Chromo,smc.Address,Number)smc.Error"
-
-	BlmSetOwner   = "SetOwner(smc.Address)smc.Error"
-	BlmAddAddress = "AddAddress([]smc.Address)smc.Error"
-	BlmDelAddress = "DelAddress([]smc.Address)smc.Error"
 
 	UPGRADE1TO2Upgrade = "Upgrade(string)(string,smc.Error)"
 

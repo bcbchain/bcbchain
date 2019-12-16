@@ -215,7 +215,7 @@ func GetBlock(numTxs int32) []byte {
 	return resBytes
 }
 
-func TransferFunc(smc sdk.ISmartContract, tokenAddr, to types.Address, value bn.Number) ([]types.KVPair, types.Error) {
+func TransferFunc(smc sdk.ISmartContract, tokenAddr, to types.Address, value bn.Number, note string) ([]types.KVPair, types.Error) {
 
 	sdk.Require(value.IsGreaterThanI(0),
 		types.ErrInvalidParameter, "Value must greater than zero")

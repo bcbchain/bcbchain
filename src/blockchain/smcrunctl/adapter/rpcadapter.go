@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"github.com/tendermint/tendermint/rpc/core/types"
 	"github.com/tendermint/tmlibs/log"
+	"strings"
 )
 
 //Routes defines RPC functions route map
@@ -94,19 +95,23 @@ func GetBlock(req map[string]interface{}) (result interface{}, err error) {
 		height = appState.BlockHeight
 	}
 
-	url := query.TmCoreURL
-	if url == "" {
+	if query.TmCoreURL == "" {
 		err = errors.New("can not get tendermint url")
 		return nil, err
 	}
-	logger.Debug("Adapter RPC", "query RPC URL", url)
+	logger.Debug("Adapter RPC", "query RPC URL", query.TmCoreURL)
 
 	res := new(core_types.ResultBlock)
-	rpc := rpcclient.NewJSONRPCClientEx(url, "", true)
+	rpc := rpcclient.NewJSONRPCClientEx(query.TmCoreURL, "", true)
 	_, err = rpc.Call("block", map[string]interface{}{"height": height}, res)
 	if err != nil {
-		logger.Error("Adapter RPC", "query block error", err.Error())
-		return nil, err
+		query.TmCoreURL = strings.Replace(query.TmCoreURL, "http", "https", 1)
+		res = new(core_types.ResultBlock)
+		rpc = rpcclient.NewJSONRPCClientEx(query.TmCoreURL, "", true)
+		_, err = rpc.Call("block", map[string]interface{}{"height": height}, res)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	b := std.Block{

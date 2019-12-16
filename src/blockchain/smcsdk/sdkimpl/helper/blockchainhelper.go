@@ -65,6 +65,15 @@ func (bh *BlockChainHelper) FormatTime(tm int64, layout string) string {
 	return time.Unix(tm, 0).Format(layout)
 }
 
+func (bh *BlockChainHelper) ParseTime(layout, value string) (int64, error) {
+	t, err := time.Parse(layout, value)
+	if err != nil {
+		return 0, err
+	}
+
+	return t.Unix(), nil
+}
+
 // CalcAccountFromPubKey calculate account address from pubKey
 func (bh *BlockChainHelper) CalcAccountFromPubKey(pubKey types.PubKey) types.Address {
 	sdk.Require(pubKey != nil && len(pubKey) == 32,

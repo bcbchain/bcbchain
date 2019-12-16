@@ -86,6 +86,10 @@ import (
 //
 // <aside class="notice">WebSocket only</aside>
 func Subscribe(wsCtx rpctypes.WSRPCContext, query string) (*ctypes.ResultSubscribe, error) {
+	if completeStarted == false {
+		return nil, errors.New("wait application complete started")
+	}
+
 	addr := wsCtx.GetRemoteAddr()
 	logger.Trace("Subscribe to query", "remote", addr, "query", query)
 
@@ -138,6 +142,10 @@ func Subscribe(wsCtx rpctypes.WSRPCContext, query string) (*ctypes.ResultSubscri
 //
 // <aside class="notice">WebSocket only</aside>
 func Unsubscribe(wsCtx rpctypes.WSRPCContext, query string) (*ctypes.ResultUnsubscribe, error) {
+	if completeStarted == false {
+		return nil, errors.New("wait application complete started")
+	}
+
 	addr := wsCtx.GetRemoteAddr()
 	logger.Trace("Unsubscribe from query", "remote", addr, "query", query)
 	q, err := tmquery.New(query)
@@ -171,6 +179,10 @@ func Unsubscribe(wsCtx rpctypes.WSRPCContext, query string) (*ctypes.ResultUnsub
 //
 // <aside class="notice">WebSocket only</aside>
 func UnsubscribeAll(wsCtx rpctypes.WSRPCContext) (*ctypes.ResultUnsubscribe, error) {
+	if completeStarted == false {
+		return nil, errors.New("wait application complete started")
+	}
+
 	addr := wsCtx.GetRemoteAddr()
 	logger.Trace("Unsubscribe from all", "remote", addr)
 	err := eventBusFor(wsCtx).UnsubscribeAll(context.Background(), addr)

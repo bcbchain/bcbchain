@@ -370,23 +370,19 @@ func BVMBalanceOf(transID, txID int64, addr types.Address, token types.Address) 
 //SetBalance set account's balance of given token to given value
 func SetBalance(transID, txID int64, addr types.Address, token types.Address, value bn.Number) {
 
+	var acc std.AccountInfo
 	key := keyOfAccountToken(addr, token)
-
 	valueBVM := statedb.Get(transID, txID, key)
-	if valueBVM == nil || len(valueBVM) == 0 {
-		panic("cannot get account")
-	}
-	accBVM := new(std.AccountInfo)
-	err := jsoniter.Unmarshal(valueBVM, accBVM)
-	if err != nil {
-		panic(err)
+	if valueBVM != nil {
+		err := jsoniter.Unmarshal(valueBVM, &acc)
+		if err != nil {
+			panic(err)
+		}
 	}
 
-	acc := std.AccountInfo{
-		Address:       token,
-		Balance:       value,
-		BVMBalanceMod: accBVM.BVMBalanceMod,
-	}
+	acc.Address = token
+	acc.Balance = value
+
 	resBytes, err := jsoniter.Marshal(acc)
 	if err != nil {
 		panic("cannot set account balance：" + err.Error())
@@ -430,7 +426,7 @@ func AddAccountToken(transID, txID int64, addr, token types.Address) {
 		}
 
 		for _, item := range tokenList {
-			if item == item {
+			if item == newToken {
 				return
 			}
 		}
@@ -767,4 +763,18 @@ func GetGasPriceRatio(transID, txID int64) string {
 		panic(err)
 	}
 	return ratio
+}
+
+func GetGenesisOrgID(transID, txID int64) string {
+	key := keyOfGenesisOrgID()
+	v := statedb.Get(transID, txID, key)
+	if len(v) == 0 {
+		return ""
+	}
+	orgID := ""
+	err := jsoniter.Unmarshal(v, &orgID)
+	if err != nil {
+		panic(err)
+	}
+	return orgID
 }

@@ -34,6 +34,10 @@ import (
 // }
 // ```
 func NetInfo() (*ctypes.ResultNetInfo, error) {
+	if completeStarted == false {
+		return nil, errors.New("wait application complete started")
+	}
+
 	listening := p2pSwitch.IsListening()
 	var listeners []string
 	for _, listener := range p2pSwitch.Listeners() {
@@ -130,5 +134,9 @@ func UnsafeDialPeers(peers []string, persistent bool) (*ctypes.ResultDialPeers, 
 // }
 // ```
 func Genesis() (*ctypes.ResultGenesis, error) {
+	if completeStarted == false {
+		return nil, errors.New("wait application complete started")
+	}
+
 	return &ctypes.ResultGenesis{Genesis: genDoc}, nil
 }

@@ -25,7 +25,7 @@ import (
 var cdc = amino.NewCodec()
 
 const (
-	pattern     = `^[a-zA-Z0-9\[\]_@.-]{1,40}$`
+	pattern     = "^[a-zA-Z0-9_@.-]{1,40}$"
 	passwordErr = "Password must contains by [Uppercase and lowercase letters, numbers, ASCII 32 through 127] and length must be [8-20]"
 )
 

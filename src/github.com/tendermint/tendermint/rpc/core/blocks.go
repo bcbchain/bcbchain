@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	ctypes "github.com/tendermint/tendermint/rpc/core/types"
 	sm "github.com/tendermint/tendermint/state"
 	"github.com/tendermint/tendermint/types"
@@ -63,6 +64,10 @@ import (
 //
 // <aside class="notice">Returns at most 20 items.</aside>
 func BlockchainInfo(minHeight, maxHeight int64) (*ctypes.ResultBlockchainInfo, error) {
+	if completeStarted == false {
+		return nil, errors.New("wait application complete started")
+	}
+
 	if minHeight == 0 {
 		minHeight = 1
 	}
@@ -284,6 +289,10 @@ func calculateSize(block *types.Block) int {
 // }
 // ```
 func Commit(heightPtr *int64) (*ctypes.ResultCommit, error) {
+	if completeStarted == false {
+		return nil, errors.New("wait application complete started")
+	}
+
 	storeHeight := blockStore.Height()
 	height, err := getHeight(storeHeight, heightPtr)
 	if err != nil {

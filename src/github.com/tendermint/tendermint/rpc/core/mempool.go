@@ -49,6 +49,10 @@ import (
 // |-----------+------+---------+----------+-----------------|
 // | tx        | Tx   | nil     | true     | The transaction |
 func BroadcastTxAsync(tx types.Tx) (*ctypes.ResultBroadcastTx, error) {
+	if completeStarted == false {
+		return nil, errors.New("wait application complete started")
+	}
+
 	if consensusReactor.FastSync() {
 		logger.Debug("syncing, rejected", "tx", tx)
 		return nil, fmt.Errorf("syncing, no tx accept")
@@ -102,6 +106,10 @@ func BroadcastTxAsync(tx types.Tx) (*ctypes.ResultBroadcastTx, error) {
 // |-----------+------+---------+----------+-----------------|
 // | tx        | Tx   | nil     | true     | The transaction |
 func BroadcastTxSync(tx types.Tx) (*ctypes.ResultBroadcastTx, error) {
+	if completeStarted == false {
+		return nil, errors.New("wait application complete started")
+	}
+
 	if consensusReactor.FastSync() {
 		logger.Debug("syncing, rejected", "tx", tx)
 		return nil, fmt.Errorf("syncing, no tx accept")
@@ -170,6 +178,10 @@ func BroadcastTxSync(tx types.Tx) (*ctypes.ResultBroadcastTx, error) {
 // |-----------+------+---------+----------+-----------------|
 // | tx        | Tx   | nil     | true     | The transaction |
 func BroadcastTxCommit(tx types.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
+	if completeStarted == false {
+		return nil, errors.New("wait application complete started")
+	}
+
 	if consensusReactor.FastSync() {
 		logger.Debug("syncing, rejected", "tx", tx)
 		return nil, fmt.Errorf("syncing, no tx accept")
@@ -262,6 +274,10 @@ func BroadcastTxCommit(tx types.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
 // }
 // ```
 func UnconfirmedTxs() (*ctypes.ResultUnconfirmedTxs, error) {
+	if completeStarted == false {
+		return nil, errors.New("wait application complete started")
+	}
+
 	txs := mempool.Reap(-1)
 	return &ctypes.ResultUnconfirmedTxs{N: len(txs), Txs: txs}, nil
 }
@@ -291,5 +307,9 @@ func UnconfirmedTxs() (*ctypes.ResultUnconfirmedTxs, error) {
 // }
 // ```
 func NumUnconfirmedTxs() (*ctypes.ResultUnconfirmedTxs, error) {
+	if completeStarted == false {
+		return nil, errors.New("wait application complete started")
+	}
+
 	return &ctypes.ResultUnconfirmedTxs{N: mempool.Size()}, nil
 }

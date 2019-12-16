@@ -10,7 +10,6 @@ import (
 	"common/socket"
 	"errors"
 	"fmt"
-	"math"
 	"strings"
 	"sync"
 	"time"
@@ -197,48 +196,11 @@ func (im *InvokerMgr) InvokeTx(
 	}
 
 	// if height in [23706999, forkHeight] then reset gas_used
-	if softforks.IsForkForV2_0_2_14654(blockHeader.Height) {
+	if softforks.V2_0_2_14654(blockHeader.Height) {
 		im.resetGasUsed(blockHeader.Height, result, tx)
 	}
 
 	return
-}
-
-// resetGasUsed if height in [23706999, forkHeight] then reset gas_used
-func (im *InvokerMgr) resetGasUsed(height int64, result *types.Response, tx types.Transaction) {
-	// reset gas_used
-	for _, msg := range tx.Messages {
-		//contract := statedbhelper.GetContract(msg.Contract)
-		contract, err := im.getEffectContract(0, 0, height, msg.Contract, msg.MethodID)
-		if err.ErrorCode != types.CodeOK {
-			panic(err.ErrorDesc)
-		}
-
-		if contract.OrgID == "orgCZkw5xz9DYa3h5pJ2CzZSuGHRCj2ot5xq" &&
-			(contract.Name == "dicepc" ||
-				contract.Name == "roll" ||
-				contract.Name == "ring") {
-			return
-		}
-
-		if contract.OrgID == "org6epUdAFZ93p5RPcw3hAqLwJ6Nr7GZQkz" && contract.Name == "lockmining-bcb" {
-			return
-		}
-	}
-
-	msg := tx.Messages[len(tx.Messages)-1]
-
-	contract, err := im.getEffectContract(0, 0, height, msg.Contract, msg.MethodID)
-	if err.ErrorCode != types.CodeOK {
-		panic(err.ErrorDesc)
-	}
-	for _, method := range contract.Methods {
-		methodID := fmt.Sprintf("%x", msg.MethodID)
-		if method.MethodID == methodID {
-			result.GasUsed = int64(math.Abs(float64(method.Gas)))
-			break
-		}
-	}
 }
 
 // TransferID - methodID of standard transfer method

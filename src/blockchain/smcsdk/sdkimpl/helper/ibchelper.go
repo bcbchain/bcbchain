@@ -300,7 +300,8 @@ func (ih *IBCHelper) pack(params ...interface{}) []types.HexBytes {
 
 // ibcContract return current effect ibc contract object
 func (ih *IBCHelper) ibcContract() sdk.IContract {
-	orgID := ih.smc.Helper().BlockChainHelper().CalcOrgID("genesis")
+	var orgID string
+	_ = ih.smc.Helper().StateHelper().GetEx("/genesis/orgid", &orgID)
 
 	key := std.KeyOfContractsWithName(orgID, "ibc")
 	versionList := ih.smc.(*sdkimpl.SmartContract).LlState().McGet(key, &std.ContractVersionList{})

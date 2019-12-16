@@ -157,10 +157,10 @@ func RollbackTx(transID int64, txID int64) {
 
 	_, ok = trans.TxIDToTx[txID]
 	if !ok {
-		panic(fmt.Sprintf("Invalid txID: %d", txID))
+		//panic(fmt.Sprintf("Invalid txID: %d", txID))
+	} else {
+		delete(trans.TxIDToTx, txID)
 	}
-
-	delete(trans.TxIDToTx, txID)
 }
 
 func CommitTx(transID int64, txID int64) ([]byte, map[string][]byte) {

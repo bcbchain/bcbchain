@@ -206,6 +206,20 @@ func NewNode(config *cfg.Config,
 		return nil, err
 	}
 
+	// Start the RPC server before the P2P server
+	// so we can eg. receive txs for the first block
+	node := &Node{config: config}
+	node.BaseService = *cmn.NewBaseService(logger, "Node", node)
+	rpccore.SetStateDB(stateDB)
+	rpccore.SetBlockStore(blockStore)
+	if config.RPC.ListenAddress != "" {
+		listeners, err := node.startRPC()
+		if err != nil {
+			return nil, err
+		}
+		node.rpcListeners = listeners
+	}
+
 	// Create the proxyApp, which manages connections (consensus, mempool, query)
 	// and sync tendermint and the app by performing a handshake
 	// and replaying any necessary blocks
@@ -402,28 +416,25 @@ func NewNode(config *cfg.Config,
 		}()
 	}
 
-	node := &Node{
-		config:        config,
-		genesisDoc:    genDoc,
-		privValidator: privValidator,
+	node.config = config
+	node.genesisDoc = genDoc
+	node.privValidator = privValidator
+	node.sw = sw
+	node.addrBook = addrBook
+	node.trustMetricStore = trustMetricStore
+	node.stateDB = stateDB
+	node.blockStore = blockStore
+	node.bcReactor = bcReactor
+	node.mempoolReactor = mempoolReactor
+	node.consensusState = consensusState
+	node.consensusReactor = consensusReactor
+	node.evidencePool = evidencePool
+	node.proxyApp = proxyApp
+	node.txIndexer = txIndexer
+	node.indexerService = indexerService
+	node.eventBus = eventBus
 
-		sw:               sw,
-		addrBook:         addrBook,
-		trustMetricStore: trustMetricStore,
-
-		stateDB:          stateDB,
-		blockStore:       blockStore,
-		bcReactor:        bcReactor,
-		mempoolReactor:   mempoolReactor,
-		consensusState:   consensusState,
-		consensusReactor: consensusReactor,
-		evidencePool:     evidencePool,
-		proxyApp:         proxyApp,
-		txIndexer:        txIndexer,
-		indexerService:   indexerService,
-		eventBus:         eventBus,
-	}
-	node.BaseService = *cmn.NewBaseService(logger, "Node", node)
+	//node.BaseService = *cmn.NewBaseService(logger, "Node", node)
 	return node, nil
 }
 
@@ -464,15 +475,18 @@ func (n *Node) OnStart() error {
 	// Add ourselves to addrbook to prevent dialing ourselves
 	n.addrBook.AddOurAddress(nodeInfo.NetAddress())
 
+	// replace next codes
+	rpccore.SetCompleteStarted(true)
+	n.ConfigureRPC()
 	// Start the RPC server before the P2P server
 	// so we can eg. receive txs for the first block
-	if n.config.RPC.ListenAddress != "" {
-		listeners, err := n.startRPC()
-		if err != nil {
-			return err
-		}
-		n.rpcListeners = listeners
-	}
+	//if n.config.RPC.ListenAddress != "" {
+	//	listeners, err := n.startRPC()
+	//	if err != nil {
+	//		return err
+	//	}
+	//	n.rpcListeners = listeners
+	//}
 
 	// Start the switch (the P2P server).
 	err = n.sw.Start()
@@ -562,7 +576,7 @@ func (n *Node) ConfigureRPC() {
 }
 
 func (n *Node) startRPC() ([]net.Listener, error) {
-	n.ConfigureRPC()
+	//n.ConfigureRPC()
 	listenAddrs := cmn.SplitAndTrim(n.config.RPC.ListenAddress, ",", " ")
 	coreCodec := amino.NewCodec()
 	ctypes.RegisterAmino(coreCodec)

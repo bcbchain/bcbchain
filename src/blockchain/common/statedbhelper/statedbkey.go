@@ -72,3 +72,7 @@ func KeyOfToken(tokenAddr types.Address) string {
 func keyOfGasPriceRatio() string {
 	return "/genesis/gaspriceratio"
 }
+
+func keyOfGenesisOrgID() string {
+	return "/genesis/orgid"
+}

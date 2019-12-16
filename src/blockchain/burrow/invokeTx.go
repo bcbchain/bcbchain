@@ -16,6 +16,7 @@ import (
 	"github.com/tendermint/go-wire/data/base58"
 	"golang.org/x/crypto/ripemd160"
 	"golang.org/x/crypto/sha3"
+	"time"
 
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/execution/evm"
@@ -29,6 +30,8 @@ const (
 	GasBvmRatio = 1
 	GasPerByte  = 200
 )
+
+var t3 time.Time
 
 //Burrow object of burrow
 type Burrow struct {
@@ -49,7 +52,7 @@ func (bu *Burrow) InvokeTx(blockHeader types2.Header, blockHash []byte, transId,
 	gasPrice := receipt.GetGasPrice(transId, txId)
 	result = new(types.Response)
 	if IsCreate(tx.Messages) {
-		bu.logger.Debug("evm: creating...")
+		bu.logger.Debug("bvm: creating...")
 		result = bu.Create(blockHeader, blockHash, transId, txId, sender, tx, pubKey, gasPrice)
 		if e := checkBalanceForFee(transId, txId, result); e != nil {
 			result.Code = types.ErrFeeNotEnough
@@ -59,10 +62,10 @@ func (bu *Burrow) InvokeTx(blockHeader types2.Header, blockHash []byte, transId,
 		return
 
 	} else if IsCall(tx.Messages) {
-		bu.logger.Debug("evm: call...")
+		bu.logger.Debug("bvm: call...")
 		st := NewState(transId, txId, bu.logger)
 		contractAddr := tx.Messages[0].Contract
-		bu.logger.Debug("evm:", "contractAddr", contractAddr)
+		bu.logger.Debug("bvm:", "contractAddr", contractAddr)
 
 		account, err := st.GetAccount(crypto2.ToEVM(contractAddr))
 		if err != nil {
@@ -77,11 +80,11 @@ func (bu *Burrow) InvokeTx(blockHeader types2.Header, blockHash []byte, transId,
 			result.Log = "no such account"
 			return
 		}
-		bu.logger.Debug("evm:", "contractToken", account.EVMToken, "code", hex.EncodeToString(account.EVMCode))
+		bu.logger.Debug("bvm:", "contractToken", account.EVMToken, "code", hex.EncodeToString(account.EVMCode))
 		st.SetToken(account.EVMToken)
 		state := evm.NewState(st, blockHashGetter)
 		result = bu.Call(state, blockHeader, blockHash, gasPrice, sender, account.EVMCode, tx, bn.N(0))
-		result.Tags = *receipt.Tags2Receipt(bu.logger, &bu.Tags, result.GasUsed*gasPrice, account.EVMToken, contractAddr, sender)
+		result.Tags = *receipt.Tags2Receipt(bu.logger, &bu.Tags, result.GasUsed*gasPrice, statedbhelper.GetGenesisToken().Address, contractAddr, sender)
 
 		if e := checkBalanceForFee(transId, txId, result); e != nil {
 			result.Code = types.ErrFeeNotEnough
@@ -91,7 +94,7 @@ func (bu *Burrow) InvokeTx(blockHeader types2.Header, blockHash []byte, transId,
 		return
 
 	} else if IsCascadeCall(tx.Messages) {
-		bu.logger.Debug("evm: cascadeCall...")
+		bu.logger.Debug("bvm: cascadeCall...")
 		result = bu.CascadeCall(blockHeader, blockHash, transId, txId, sender, tx, gasPrice)
 		if e := checkBalanceForFee(transId, txId, result); e != nil {
 			result.Code = types.ErrFeeNotEnough
@@ -107,8 +110,8 @@ func (bu *Burrow) InvokeTx(blockHeader types2.Header, blockHash []byte, transId,
 
 // Create of EVM contract create
 func (bu *Burrow) Create(blockHeader types2.Header, blockHash []byte, transId, txId int64, sender types.Address, tx types.Transaction, pubKey types.PubKey, gasPrice int64) (result *types.Response) {
-	bu.logger.Debug("evm:", "transId", transId, "txId", txId, "gas", tx.GasLimit)
-	bu.logger.Debug("evm:", "tx", tx.String())
+	bu.logger.Debug("bvm:", "transId", transId, "txId", txId, "gas", tx.GasLimit)
+	bu.logger.Debug("bvm:", "tx", tx.String())
 	gas := uint64(tx.GasLimit) * GasBvmRatio
 	result = new(types.Response)
 	nonce := make([]byte, 8)
@@ -117,7 +120,7 @@ func (bu *Burrow) Create(blockHeader types2.Header, blockHash []byte, transId, t
 	st := NewState(transId, txId, bu.logger)
 	token := tx.Messages[0].Contract
 	st.SetToken(token)
-	bu.logger.Debug("evm:", "create contract token=", token)
+	bu.logger.Debug("bvm:", "create contract token=", token)
 	state := evm.NewState(st, blockHashGetter)
 
 	var code []byte
@@ -127,17 +130,15 @@ func (bu *Burrow) Create(blockHeader types2.Header, blockHash []byte, transId, t
 		result.Log = err.Error()
 		return
 	}
-	bu.logger.Debug("evm:", "code", code)
+	bu.logger.Debug("bvm:", "code", code)
 
 	contractAddr := CalcContractAddr(sender, tx.Nonce, blockHeader.ChainID)
 	evmAddr := crypto2.ToEVM(contractAddr)
-	bu.logger.Debug("evm:", "contractAddr", contractAddr, "evmAddr", evmAddr)
 	state.CreateAccount(evmAddr)
-	bu.logger.Debug("evm", "contractAccount created=", evmAddr)
+	bu.logger.Debug("bvm:", "contractAddr", contractAddr, "bvmAddr", evmAddr)
 
 	senderEVMAddr := crypto2.ToEVM(sender)
 	ourEvm := evm.NewVM(newParams(blockHeader, blockHash, gasPrice, tx.GasLimit), senderEVMAddr, nonce, bu.logger)
-	bu.logger.Debug("evm:", "new evm", "succeed")
 	out, err := ourEvm.Call(state, evm.NewBcEventSink(bu.logger, &bu.Tags), senderEVMAddr, evmAddr, code, nil, bn.N(0), &gas)
 	if err != nil {
 		result.Code = types.ErrCodeEVMInvoke
@@ -156,19 +157,19 @@ func (bu *Burrow) Create(blockHeader types2.Header, blockHash []byte, transId, t
 	result.Code = types.CodeOK
 	result.Data = contractAddr
 	result.GasUsed = (tx.GasLimit*GasBvmRatio - int64(gas)) / GasBvmRatio
-	bu.logger.Debug("evm:", "Create-GasUsed: ", result.GasUsed)
+	bu.logger.Debug("bvm:", "Create-GasUsed: ", result.GasUsed)
 
 	gasForCreate := int64(GasPerByte * len(out))
 	result.Tags = *receipt.Tags2Receipt(bu.logger, &bu.Tags,
 		(result.GasUsed+gasForCreate)*gasPrice,
-		token, contractAddr, sender)
+		statedbhelper.GetGenesisToken().Address, contractAddr, sender)
 
 	return
 }
 
 // Call of EVM contract contract call
 func (bu *Burrow) Call(state *evm.State, blockHeader types2.Header, blockHash []byte, gasPrice int64, sender types.Address, code []byte, tx types.Transaction, value bn.Number) (result *types.Response) {
-	bu.logger.Debug("evm:", "tx", tx.String())
+	bu.logger.Debug("bvm:", "tx", tx.String())
 	gas := uint64(tx.GasLimit) * GasBvmRatio
 	result = new(types.Response)
 	nonce := make([]byte, 8)
@@ -182,11 +183,18 @@ func (bu *Burrow) Call(state *evm.State, blockHeader types2.Header, blockHash []
 		return
 	}
 
-	bu.logger.Debug("evm:", "input", hex.EncodeToString(input))
+	bu.logger.Debug("bvm:", "input", hex.EncodeToString(input))
 
 	senderEVMAddr := crypto2.ToEVM(sender)
 	ourEvm := evm.NewVM(newParams(blockHeader, blockHash, gasPrice, tx.GasLimit), senderEVMAddr, nonce, bu.logger)
+
+	t1 := time.Now()
 	out, err := ourEvm.Call(state, evm.NewBcEventSink(bu.logger, &bu.Tags), senderEVMAddr, crypto2.ToEVM(tx.Messages[0].Contract), code, input, value, &gas)
+	t2 := time.Now()
+
+	t3 = t3.Add(t2.Sub(t1))
+	bu.logger.Debug("-------67890------", "AllTime: ", t3.String())
+
 	if err != nil {
 		result.Code = types.ErrCodeEVMInvoke
 		result.Log = err.Error()
@@ -202,7 +210,7 @@ func (bu *Burrow) Call(state *evm.State, blockHeader types2.Header, blockHash []
 	result.Code = types.CodeOK
 	result.Data = hex.EncodeToString(out)
 	result.GasUsed = (tx.GasLimit*GasBvmRatio - int64(gas)) / GasBvmRatio
-	bu.logger.Debug("evm:", "Call-GasUsed: ", result.GasUsed)
+	bu.logger.Debug("bvm:", "Call-GasUsed: ", result.GasUsed)
 
 	return
 }
@@ -210,7 +218,7 @@ func (bu *Burrow) Call(state *evm.State, blockHeader types2.Header, blockHash []
 // CascadeCall of EVM contract Cascade Call
 func (bu *Burrow) CascadeCall(blockHeader types2.Header, blockHash []byte, transId, txId int64, sender types.Address, tx types.Transaction, gasPrice int64) (result *types.Response) {
 	contractAddr := tx.Messages[1].Contract
-	bu.logger.Debug("evm:", "contractAddr", contractAddr)
+	bu.logger.Debug("bvm:", "contractAddr", contractAddr)
 	st := NewState(transId, txId, bu.logger)
 	account, err := st.GetAccount(crypto2.ToEVM(contractAddr))
 	if err != nil {
@@ -225,7 +233,7 @@ func (bu *Burrow) CascadeCall(blockHeader types2.Header, blockHash []byte, trans
 		result.Log = "no such account"
 		return
 	}
-	bu.logger.Debug("evm:", "contractToken", account.EVMToken, "code", hex.EncodeToString(account.EVMCode))
+	bu.logger.Debug("bvm:", "contractToken", account.EVMToken, "code", hex.EncodeToString(account.EVMCode))
 	st.SetToken(account.EVMToken)
 	state := evm.NewState(st, blockHashGetter)
 
@@ -238,22 +246,13 @@ func (bu *Burrow) CascadeCall(blockHeader types2.Header, blockHash []byte, trans
 		return
 	}
 	money := bn.NString(string(value)).MulI(1e9)
-	bu.logger.Debug("evm:", "sender", sender, "paid", money)
+	bu.logger.Debug("bvm:", "sender", sender, "paid", money)
 
 	// Contract call
 	tx.Messages = append(tx.Messages[1:])
 	result = bu.Call(state, blockHeader, blockHash, gasPrice, sender, account.EVMCode, tx, money)
 
-	result.Tags = *receipt.Tags2Receipt(bu.logger, &bu.Tags, result.GasUsed*gasPrice, account.EVMToken, contractAddr, sender)
-
-	//tag0 := receipt.Emit(bu.logger,
-	//	std.Transfer{CheckTx
-	//		Token: st.tokenAddr,
-	//		From:  sender,
-	//		To:    contractAddr,
-	//		Value: money,
-	//	}, contractAddr, len(result.Tags))
-	//result.Tags = append(result.Tags, *tag0)
+	result.Tags = *receipt.Tags2Receipt(bu.logger, &bu.Tags, result.GasUsed*gasPrice, statedbhelper.GetGenesisToken().Address, contractAddr, sender)
 
 	return
 }

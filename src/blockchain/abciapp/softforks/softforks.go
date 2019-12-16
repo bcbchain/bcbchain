@@ -16,10 +16,11 @@ var TagToForkInfo map[string]ForkInfo
 
 //具体含义请参考 bcchain.yaml
 type ForkInfo struct {
-	Tag               string `json:"tag,omitempty"`               //Tag, contains the former released version
-	BugBlockHeight    int64  `json:"bugblockheight,omitempty"`    // bug block height
-	EffectBlockHeight int64  `json:"effectblockheight,omitempty"` // Effect Block Height
-	Description       string `json:"description,omitempty"`       // Description for the fork
+	Tag               string              `json:"tag,omitempty"`               // Tag, contains the former released version
+	BugBlockHeight    int64               `json:"bugblockheight,omitempty"`    // bug block height
+	EffectBlockHeight int64               `json:"effectblockheight,omitempty"` // Effect Block Height
+	Description       string              `json:"description,omitempty"`       // Description for the fork
+	FilterContracts   map[string][]string `json:"filterContracts"`             // Filter contract list
 }
 
 // explicit call
@@ -100,12 +101,26 @@ func V2_0_1_13780(blockHeight int64) bool {
 
 // Fixs bug #4251, gas_used showed be sum of all messages in block.
 // Adds the softfork to show all of gas_used in block
-func IsForkForV2_0_2_14654(blockHeight int64) bool {
+func V2_0_2_14654(blockHeight int64) bool {
 	if forkInfo, ok := TagToForkInfo["fork-abci#2.0.2.14654"]; ok {
 		if blockHeight < forkInfo.EffectBlockHeight &&
 			blockHeight > forkInfo.BugBlockHeight {
 			return true
 		}
 	}
+	return false
+}
+
+func FilterContracts_V2_0_2_14654(orgID, contractName string) bool {
+	if forkInfo, ok := TagToForkInfo["fork-abci#2.0.2.14654"]; ok {
+		if nameList, ok := forkInfo.FilterContracts[orgID]; ok {
+			for _, itemName := range nameList {
+				if itemName == contractName {
+					return true
+				}
+			}
+		}
+	}
+
 	return false
 }

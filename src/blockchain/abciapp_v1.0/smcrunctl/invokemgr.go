@@ -122,6 +122,27 @@ func (im *InvokeMgr) RegisterIntoContractDocker(respData, nameVersion string) bc
 	return bcErr
 }
 
+func (im *InvokeMgr) Softforks_2_0_2_14654(orgID, contractName string) bool {
+	client, err := im.pool().GetClient()
+	if err != nil {
+		panic(err)
+	}
+	defer im.pool().ReleaseClient(client)
+
+	resp, err := client.Call("Softforks_2_0_2_14654", map[string]interface{}{"orgID": orgID, "contractName": contractName}, 10)
+	if err != nil {
+		panic(err)
+	}
+
+	var bForks bool
+	err = jsoniter.Unmarshal([]byte(resp.(string)), &bForks)
+	if err != nil {
+		panic(err)
+	}
+
+	return bForks
+}
+
 func (im *InvokeMgr) GetInvokeItems(transID int64) *stubapi.InvokeParams {
 	item, ok := im.invokeItems.Load(transID)
 	if !ok {

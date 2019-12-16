@@ -9,7 +9,6 @@ import (
 	"blockchain/smcsdk/sdk/jsoniter"
 	"blockchain/smcsdk/sdk/std"
 	"blockchain/smcsdk/sdk/types"
-	"blockchain/smcsdk/sdkimpl/helper"
 	"bytes"
 	"common/dockerlib"
 	"common/fs"
@@ -96,8 +95,8 @@ func (b *Builder) GetContractDllPath(transID int64, txID int64, orgID string) (s
 	}
 
 	b.Logger.Debug("GetContractDllPath entered:", "transID", transID, "txID", txID, "orgID", orgID)
-	blh := helper.BlockChainHelper{}
-	genesisOrgID := blh.CalcOrgID("genesis")
+	//blh := helper.BlockChainHelper{}
+	genesisOrgID := statedbhelper.GetGenesisOrgID(transID, txID)
 	orgCodeHash := statedbhelper.GetOrgCodeHash(transID, txID, orgID)
 
 	if orgID == genesisOrgID && len(orgCodeHash) == 0 {
@@ -211,8 +210,7 @@ func (b *Builder) GetContractDllPath(transID int64, txID int64, orgID string) (s
 func (b *Builder) BuildContract(transID int64, txID int64, contractMeta std.ContractMeta) std.BuildResult {
 	b.Logger.Debug("BuildContract entered:", "transID", transID, "txID", txID)
 	b.Logger.Trace("contractMeta", contractMeta)
-	blh := helper.BlockChainHelper{}
-	genesisOrgID := blh.CalcOrgID("genesis")
+	genesisOrgID := statedbhelper.GetGenesisOrgID(transID, txID)
 
 	err := b.checkSign(transID, txID, contractMeta.CodeDevSig, contractMeta.CodeOrgSig, contractMeta.CodeHash, contractMeta.OrgID, genesisOrgID)
 	if err != nil {

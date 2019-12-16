@@ -1,6 +1,7 @@
 package core
 
 import (
+	"github.com/pkg/errors"
 	ctypes "github.com/tendermint/tendermint/rpc/core/types"
 	"github.com/tendermint/tendermint/version"
 )
@@ -28,6 +29,10 @@ import (
 // }
 // ```
 func Health() (*ctypes.ResultHealth, error) {
+	if completeStarted == false {
+		return nil, errors.New("wait application complete started")
+	}
+
 	state := consensusState.GetState()
 
 	return &ctypes.ResultHealth{

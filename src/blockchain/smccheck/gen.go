@@ -1,6 +1,7 @@
 package smccheck
 
 import (
+	"blockchain/common/statedbhelper"
 	"blockchain/smccheck/gen"
 	"blockchain/smccheck/gencmd"
 	"blockchain/smccheck/genstub"
@@ -15,8 +16,6 @@ import (
 	"strings"
 )
 
-const orgGenesis = "orgJgaGConUyK81zibntUBjQ33PKctpk1K1G"
-
 // Gen - walk contract path and generate code
 func Gen(contractDir, contractName, version string, contractInfoList []gen.ContractInfo) (results []std.GenResult, err types.Error) {
 
@@ -25,7 +24,9 @@ func Gen(contractDir, contractName, version string, contractInfoList []gen.Contr
 	subDirs, er := ioutil.ReadDir(contractDir)
 	if er != nil {
 		panic(er)
-	} else if len(subDirs) > 2 || (len(subDirs) == 2 && !(subDirs[0].Name() == orgGenesis || subDirs[1].Name() == orgGenesis)) {
+	} else if len(subDirs) > 2 ||
+		(len(subDirs) == 2 &&
+			!(subDirs[0].Name() == statedbhelper.GetGenesisOrgID(0, 0) || subDirs[1].Name() == statedbhelper.GetGenesisOrgID(0, 0))) {
 		panic("invalid directory")
 	}
 
@@ -93,7 +94,7 @@ func Gen(contractDir, contractName, version string, contractInfoList []gen.Contr
 	// generate cmd
 	stubName := subDirs[0].Name()
 	if len(subDirs) == 2 {
-		if subDirs[0].Name() == orgGenesis {
+		if subDirs[0].Name() == statedbhelper.GetGenesisOrgID(0, 0) {
 			stubName = subDirs[1].Name()
 		}
 	}

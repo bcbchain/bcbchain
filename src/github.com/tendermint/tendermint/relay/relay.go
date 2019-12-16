@@ -85,7 +85,10 @@ func (rc *RelayController) UpdateOpenURL(chainID string, urls []string) {
 
 	if _, ok := rc.ChainIDToURLs.Load(chainID); ok {
 		queueID := makeQueueID(localChainID, chainID)
-		qr := rc.QueueIDToQueueRelay[queueID]
+		qr, ok := rc.QueueIDToQueueRelay[queueID]
+		if !ok {
+			return
+		}
 		qr.RemoteURLs = urls
 		rc.QueueIDToQueueRelay[queueID] = qr
 

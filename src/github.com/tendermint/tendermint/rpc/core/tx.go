@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 
 	"encoding/hex"
 
@@ -114,6 +115,9 @@ import (
   stateCode = 2   checkTx完成
 */
 func Tx(hash string, prove bool) (*ctypes.ResultTx, error) {
+	if completeStarted == false {
+		return nil, errors.New("wait application complete started")
+	}
 
 	var stateCode uint32
 	var height int64

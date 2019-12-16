@@ -1,6 +1,7 @@
 package core
 
 import (
+	"github.com/pkg/errors"
 	cm "github.com/tendermint/tendermint/consensus"
 	"github.com/tendermint/tendermint/p2p"
 	ctypes "github.com/tendermint/tendermint/rpc/core/types"
@@ -44,6 +45,10 @@ import (
 // }
 // ```
 func Validators(heightPtr *int64) (*ctypes.ResultValidators, error) {
+	if completeStarted == false {
+		return nil, errors.New("wait application complete started")
+	}
+
 	storeHeight := blockStore.Height()
 	height, err := getHeight(storeHeight, heightPtr)
 	if err != nil {
@@ -177,6 +182,10 @@ func Validators(heightPtr *int64) (*ctypes.ResultValidators, error) {
 // ```
 // UNSTABLE
 func DumpConsensusState() (*ctypes.ResultDumpConsensusState, error) {
+	if completeStarted == false {
+		return nil, errors.New("wait application complete started")
+	}
+
 	peers := p2pSwitch.Peers().List()
 	peerRoundStates := make([]ctypes.PeerRoundState, 0)
 	for _, peer := range peers {

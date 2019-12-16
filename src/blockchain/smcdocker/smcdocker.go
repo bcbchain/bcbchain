@@ -39,6 +39,7 @@ type RunDocker struct {
 	TxID         int64
 	ContractAddr string
 	OrgID        string
+	DockerName   string
 	c            chan RunDockerRes
 }
 
@@ -78,12 +79,12 @@ func (sd *SMCDocker) Init(log log.Logger, callbackURL string, f func(url string)
 func (sd *SMCDocker) GetContractInvokeURL(transID, txID int64, contractAddr types.Address) (string, string, error) {
 	sd.logger.Trace("smcdocker GetContractInvokeURL", "transID", transID, "contract", contractAddr)
 	//根据合约地址，查询组织ID
-	var orgID string
+	var orgID, dockerName string
 	if contractAddr == smcbuilder.ThirdPartyContract {
 		orgID = smcbuilder.ThirdPartyContract
+		dockerName = orgID
 	} else if contractAddr == std.GetGenesisContractAddr(statedbhelper.GetChainID()) {
-		blh := helper.BlockChainHelper{}
-		orgID = blh.CalcOrgID("genesis")
+		dockerName = "genesis"
 	} else {
 		split := strings.Split(contractAddr, ".")
 		if len(split) == 2 {
@@ -98,8 +99,8 @@ func (sd *SMCDocker) GetContractInvokeURL(transID, txID int64, contractAddr type
 		}
 		orgCodeHash := statedbhelper.GetOrgCodeHash(transID, txID, orgID)
 
-		blh := helper.BlockChainHelper{}
-		genesisOrgID := blh.CalcOrgID("genesis")
+		genesisOrgID := statedbhelper.GetGenesisOrgID(transID, txID)
+		dockerName = orgID
 
 		var genesisOrgHashStr string
 		if orgID != genesisOrgID {
@@ -134,6 +135,7 @@ func (sd *SMCDocker) GetContractInvokeURL(transID, txID int64, contractAddr type
 			TxID:         txID,
 			ContractAddr: contractAddr,
 			OrgID:        orgID,
+			DockerName:   dockerName,
 			c:            c,
 		}
 		res := <-c
@@ -266,7 +268,7 @@ func (sd *SMCDocker) runDockerSever() {
 				dllPath = strings.Replace(dllPath, "\\smcrunsvc.exe", "", 1)
 				runParam.WorkDir = dllPath
 			} else {
-				logPath := filepath.Join(builder.WorkDir, "log", rd.OrgID)
+				logPath := filepath.Join(builder.WorkDir, "log", rd.DockerName)
 				err := os.MkdirAll(logPath, 0750)
 				if err != nil {
 					startingDocker.Delete(rd.OrgID)
@@ -288,7 +290,7 @@ func (sd *SMCDocker) runDockerSever() {
 					"-c",
 					callBackUrl,
 				}
-				workDirDocker := "/log/" + rd.OrgID
+				workDirDocker := "/log/" + rd.DockerName
 				runParam.WorkDir = workDirDocker
 
 				runParam.AutoRemove = false
@@ -309,19 +311,19 @@ func (sd *SMCDocker) runDockerSever() {
 			}
 
 			d := dockerlib.GetDockerLib()
-			sd.logger.Debug("runDockerSever kill", "killOrgID", rd.OrgID)
+			sd.logger.Debug("runDockerSever kill", "killOrgID", rd.DockerName)
 			if v, ok := sd.orgNameToURL.Load(rd.OrgID); ok {
 				fc(v.(string))
 			}
-			isKill := d.Kill(rd.OrgID)
-			sd.logger.Debug("runDockerSever kill", "killOrgID", rd.OrgID, "killResult", isKill)
+			isKill := d.Kill(rd.DockerName)
+			sd.logger.Debug("runDockerSever kill", "killOrgID", rd.DockerName, "killResult", isKill)
 			if !isKill {
-				panic(fmt.Sprintf("kill docker for %v fail!", rd.OrgID))
+				panic(fmt.Sprintf("kill docker for %v fail!", rd.DockerName))
 			}
 			sd.logger.Debug("Run docker", "imageName", imageName, "orgID", rd.OrgID, "param", runParam)
 
-			ok, err := d.Run(imageName, rd.OrgID, &runParam)
-			sd.logger.Debug("Run docker result", "orgID", rd.OrgID, "result", ok)
+			ok, err := d.Run(imageName, rd.DockerName, &runParam)
+			sd.logger.Debug("Run docker result", "orgID", rd.DockerName, "result", ok)
 			if !ok {
 				if value, ok := startingDocker.Load(rd.OrgID); ok {
 					res := value.([]chan RunDockerRes)
@@ -336,17 +338,17 @@ func (sd *SMCDocker) runDockerSever() {
 				return
 			}
 
-			dockerURL := "tcp://" + d.GetDockerContainerIP(rd.OrgID) + ":" + portStr
+			dockerURL := "tcp://" + d.GetDockerContainerIP(rd.DockerName) + ":" + portStr
 			sd.logger.Debug("waitSmcRunSvcReady begin", "dockerURL", dockerURL)
 			if waitSmcRunSvcReady(dockerURL, sd.logger) {
 				sd.logger.Info("smcdocker GetContractInvokeURL run docker ok ", "transID", rd.TransID, "URL", dockerURL)
 			} else {
-				panic(fmt.Sprintf("smcdocker GetContractInvokeURL run docker for %v failed", rd.OrgID))
+				panic(fmt.Sprintf("smcdocker GetContractInvokeURL run docker for %v failed", rd.DockerName))
 			}
 			sd.logger.Debug("put url to orgNameToURL map", "dockerURL", dockerURL)
 
-			sd.orgNameToURL.Store(rd.OrgID, dockerURL)
-			sd.orgIdToLastTime.Store(rd.OrgID, time.Now())
+			sd.orgNameToURL.Store(rd.DockerName, dockerURL)
+			sd.orgIdToLastTime.Store(rd.DockerName, time.Now())
 
 			sd.logger.Debug("write response to run docker channel", "orgID", rd.OrgID, "dockerURL", dockerURL)
 			if value, ok := startingDocker.Load(rd.OrgID); ok {

@@ -62,6 +62,8 @@ var (
 	logger log.Logger
 
 	privatePeerIDs []string
+
+	completeStarted bool // it's true if application complete started
 )
 
 func SetPrivatePeerIDs(pids string) {
@@ -122,4 +124,8 @@ func SetLogger(l log.Logger) {
 
 func SetEventBus(b *types.EventBus) {
 	eventBus = b
+}
+
+func SetCompleteStarted(b bool) {
+	completeStarted = b
 }

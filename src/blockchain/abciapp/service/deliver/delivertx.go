@@ -499,6 +499,9 @@ func emitTransferReceipt(sender, to, tokenAddr types2.Address, value bn.Number) 
 }
 
 func combineBuffer(nonceBuffer, txBuffer map[string][]byte) map[string][]byte {
+	if txBuffer == nil {
+		txBuffer = make(map[string][]byte)
+	}
 
 	for k, v := range nonceBuffer {
 		txBuffer[k] = v

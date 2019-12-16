@@ -1,6 +1,7 @@
 package core
 
 import (
+	"github.com/pkg/errors"
 	"github.com/tendermint/go-crypto"
 	"time"
 
@@ -64,6 +65,10 @@ import (
 //}
 // ```
 func Status() (*ctypes.ResultStatus, error) {
+	if completeStarted == false {
+		return nil, errors.New("wait application complete started")
+	}
+
 	latestHeight := blockStore.Height()
 	var (
 		latestBlockMeta     *types.BlockMeta
