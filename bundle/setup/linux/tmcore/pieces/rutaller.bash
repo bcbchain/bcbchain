@@ -6,7 +6,8 @@ export PATH=/usr/bin:/bin:/usr/sbin:/sbin
 
 [[ ! -d /home/tmcore/log ]] && mkdir -p /home/tmcore/log && chown tmcore:tmcore /home/tmcore/log >/dev/null
 
-if [ ! "$(systemctl -q is-enabled tmcore.service 2>/dev/null)" ]; then
+if [ "$(systemctl is-enabled tmcore.service 2>/dev/null)" != "enabled" ]; then
+  echo noService >>/home/tmcore/log/rutaller.log
   exit 0
 fi
 
@@ -16,7 +17,7 @@ protocol="http://"
 myPort=$(grep -m 1 "^laddr =" /etc/tmcore/config/config.toml | awk -F: '{print $3}' | sed -e 's/"//')
 
 myStatusTempFile=$(mktemp /tmp/tmcore-myStatus-XXXXXXXX)
-(curl --max-time 3 --connect-timeout 2 --silent -k ${protocol}localhost:"${myPort}"/status 2>&1) >"${myStatusTempFile}"
+(curl --max-time 3 --connect-timeout 2 --silent -k "${protocol}localhost:${myPort}/status" 2>&1) >"${myStatusTempFile}"
 imSyncing=$(awk '/syncing/{print $2}' "${myStatusTempFile}")
 
 myHeight=$(awk '/latest_block_height/{gsub(",","");print $2}' "${myStatusTempFile}")

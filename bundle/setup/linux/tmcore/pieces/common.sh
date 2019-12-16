@@ -66,11 +66,12 @@ isCorruptedNode() {
 getChainIDFromNode() {
   officials_=$1
   firstNode=$(echo ${officials_} | cut -d, -f1) 
-  genesis=$(curl http://${firstNode}/genesis 2>/dev/null)
-  if [ ! -n "$genesis" ]; then
-     genesis=$(curl https://${firstNode}/genesis 2>/dev/null)
-  fi
+  genesis=$(curl -L http://${firstNode}/genesis 2>/dev/null)
   chainID=($(echo ${genesis} | ./jq '.result.genesis.chain_id' 2>/dev/null | tr -d "\""))
+  if [ -z ${chainID:-} ]; then
+     genesis=$(curl https://${firstNode}/genesis 2>/dev/null)
+     chainID=($(echo ${genesis} | ./jq '.result.genesis.chain_id' 2>/dev/null | tr -d "\""))
+  fi
   echo ${chainID:-}
 }
 
@@ -124,7 +125,8 @@ doCopyFiles() {
     echo ${version_} > /etc/tmcore/genesis/${chainID_}/genesis.version
     chmod 777 /etc/tmcore/genesis/${chainID_}/genesis.version
   fi
-    
+
+  export TMHOME=/etc/tmcore
   touch /var/spool/cron/root
   sed -i '/rutaller.bash/d' /var/spool/cron/root
   echo "* * * * * /usr/local/tmcore/bin/rutaller.bash >> /home/tmcore/log/rutaller.log 2>&1" >> /var/spool/cron/root

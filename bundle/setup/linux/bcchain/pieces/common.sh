@@ -55,11 +55,12 @@ isCorruptedChain() {
 getChainIDFromNode() {
   officials_=$1
   firstNode=$(echo ${officials_} | cut -d, -f1) 
-  genesis=$(curl http://${firstNode}/genesis 2>/dev/null)
-  if [ ! -n "$genesis" ]; then
-     genesis=$(curl https://${firstNode}/genesis 2>/dev/null)
-  fi
+  genesis=$(curl -L http://${firstNode}/genesis 2>/dev/null)
   chainID=($(echo ${genesis} | ./jq '.result.genesis.chain_id' 2>/dev/null | tr -d "\""))
+  if [ -z ${chainID:-} ]; then
+     genesis=$(curl https://${firstNode}/genesis 2>/dev/null)
+     chainID=($(echo ${genesis} | ./jq '.result.genesis.chain_id' 2>/dev/null | tr -d "\""))
+  fi
   echo ${chainID:-}
 }
 
