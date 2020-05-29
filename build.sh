@@ -1,20 +1,14 @@
 #!/bin/bash
 
-#如果编译时thirdparty出错，可能是因为thirdparty有更新，请删除thirdparty-master.zip文件重新编译
-if [ ! -f "../thirdparty-master.zip" ];then
-  wget https://github.com/bcbchain/thirdparty/archive/master.zip -O ../thirdparty-master.zip 
-fi
-
-if [ ! -d "../thirdparty-master" ];then
-  unzip ../thirdparty-master.zip -d ..
-fi
-
 cwd=`pwd`
-export GOPATH=${cwd}:${cwd}/../thirdparty-master
+export GOPATH=${cwd}:${cwd}/../bclib:${cwd}/../bcsmc-sdk:${cwd}/../../third-party
 
-echo go install blockchain
-go install blockchain/cmd/bcchain
+echo go install ./src/...
+go install ./src/...
+echo
+echo go install github.com/hyperledger/burrow/cmd/bvm
+go install github.com/hyperledger/burrow/cmd/bvm
+echo
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go install ./src/...
 
-echo go install tendermint
-go install github.com/tendermint/tendermint/cmd/tendermint
 
