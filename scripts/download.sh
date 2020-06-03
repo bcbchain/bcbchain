@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # 根据 bcb.mod 文件下载依赖资源，包括 third_party，bclib，sdk，genesis-smcrunsvc，
-
+cd ..
 echo "==> Downloading files..."
 PREFIX="https://"
 SUFFIX="/releases/download/"
@@ -38,7 +38,7 @@ do
   fi
 
   FILENAME="${TAG##*/}"
-  DOWNLOAD="$PREFIX$TAG$SUFFIX$VER/$FILENAME""_$VER.tar.gz"
+  DOWNLOAD="$PREFIX$TAG$SUFFIX${VER:1}/$FILENAME""_$VER.tar.gz"
 
   pushd "$DOWNLOAD_DIR" >/dev/null || exit 1
   echo "==> downloading from" "$DOWNLOAD"
@@ -49,3 +49,4 @@ done
 
 echo "==> Download results:"
 ls -hl "$DOWNLOAD_DIR"
+cd scripts

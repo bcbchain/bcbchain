@@ -4,7 +4,6 @@ set -e
 # WARN: non hermetic build (people must run this script inside docker to
 # produce deterministic binaries).
 
-bash scripts/download.sh
 
 # Get the version from the environment, or try to figure it out.
 if [ -z "$VERSION" ]; then
@@ -22,7 +21,7 @@ echo "==> Building $project_name $VERSION..."
 
 cd scripts
 
-if [[ -f "download.sh" ]];then
+if [[ -f "downlosad.sh" ]];then
   source download.sh
 fi
 

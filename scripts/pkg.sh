@@ -1,6 +1,6 @@
 #!/bin/bash
 
-
+cd ..
 # Delete the old dir
 echo "==> Removing old directory..."
 rm -rf build/pkg
@@ -30,7 +30,7 @@ for FILENAME in $(find . -mindepth 1 -maxdepth 1 -type f); do
     SDKNAME=${FILENAME:2}
   fi
 
-  if [[ "$FILENAME" == *third_party*.tar.gz ]]; then
+  if [[ "$FILENAME" == *thirdparty*.tar.gz ]]; then
     THIRDPARTYNAME=${FILENAME:2}
   fi
 done
@@ -38,7 +38,6 @@ done
 # todo 还存在问题
 mkdir -p bclib
 if [ -n "$BCLIBNAME" ];then
-  echo "$BCLIBNAME"
   tar xf "$BCLIBNAME" -C bclib/
 fi
 
@@ -48,7 +47,7 @@ if [ -n "$SDKNAME" ];then
 fi
 
 mkdir -p src
-tar xf third_party*.tar.gz -C src/
+tar xf thirdparty*.tar.gz -C src/
 
 mkdir -p src/github.com/bcbchain/
 cp -r bclib/* src/github.com/bcbchain/
@@ -104,7 +103,7 @@ for arch in "${arch_list[@]}"; do
         mkdir -p "build/pkg/${os}_${arch}/pieces/$CHAIN/.config"
 	      cp -f "bundle/.config/$CHAIN"/* "build/pkg/${os}_${arch}/pieces/$CHAIN/.config/"
 	      cp build/download/genesis* "build/pkg/${os}_${arch}/pieces/$CHAIN/.config/"
-	      cp build/download/third_party*.tar.gz "build/pkg/${os}_${arch}/pieces/"
+	      cp build/download/thirdparty*.tar.gz "build/pkg/${os}_${arch}/pieces/"
 	      cp build/download/sdk*.tar.gz "build/pkg/${os}_${arch}/pieces/"
       done
 		fi
@@ -154,8 +153,8 @@ popd
 # Done
 echo ""
 echo "==> Build results:"
-echo "==> Path: $DIST_DIR"
+echo "==> Path: ./build/dist"
 echo "==> Files: "
-ls -hl "$DIST_DIR"
+ls -hl ./build/dist
 
-exit 0
+cd scripts
