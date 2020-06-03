@@ -21,7 +21,7 @@ echo "==> Building $project_name $VERSION..."
 
 cd scripts
 
-if [[ -f "downlosad.sh" ]];then
+if [[ -f "download.sh" ]];then
   source download.sh
 fi
 
