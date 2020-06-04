@@ -108,6 +108,7 @@ doCopyFiles() {
   chmod 775 /home/bcchain/log
   chmod 644 /usr/lib/systemd/system/bcchain.service
   chmod 755 /usr/local/bcchain /usr/local/bcchain/bin /usr/local/bcchain/bin/*
+  chmod 751 -R /home/bcchain/.build/smcrunsvc_v1.0_3dcontract/bin*
 
 #  bash package.sh
 #  diff version_sdk /home/bcchain/.build/sdk/version >/dev/null 2>/dev/null
