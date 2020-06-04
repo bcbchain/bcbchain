@@ -50,8 +50,8 @@ mkdir -p src
 tar xf thirdparty*.tar.gz -C src/
 
 mkdir -p src/github.com/bcbchain/
-cp -r bclib/* src/github.com/bcbchain/
-cp -r sdk/* src/github.com/bcbchain/
+cp -r bclib src/github.com/bcbchain/
+cp -r sdk src/github.com/bcbchain/
 
 if [ -n "$THIRDPARTYNAME" ];then
   tar zcf "$THIRDPARTYNAME" src
@@ -65,7 +65,7 @@ mkdir -p src/github.com
 cp -r bclib/algorithm src/blockchain/
 rm -rf bclib/algorithm
 
-cp -r bclib/types src/common/
+cp -r bclib/types src/blockchain/
 rm -rf bclib/types
 
 cp -r bclib/tendermint src/github.com/
@@ -74,7 +74,7 @@ rm -rf bclib/tendermint
 cp -r bclib/* src/common/
 rm -rf bclib
 
-cp -r sdk/* src/blockchain/
+cp -r sdk/* src/blockchain/smcsdk
 tar zcf "$SDKNAME" src
 rm -rf src
 rm -rf sdk

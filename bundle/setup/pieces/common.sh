@@ -110,31 +110,35 @@ doCopyFiles() {
   chmod 755 /usr/local/bcchain /usr/local/bcchain/bin /usr/local/bcchain/bin/*
 
 #  bash package.sh
-  diff version_sdk /home/bcchain/.build/sdk/version >/dev/null 2>/dev/null
-  if [[ "$?" != "0" ]]; then
-    oldVer=$(cat /home/bcchain/.build/sdk/version 2>/dev/null | tr -d "\r")
-    newVer=$(cat version_sdk|tr -d "\r")
-    if [[ -z ${oldVer} ]]; then
-      echo install sdk with version ${newVer}
-    else
-      echo update sdk from version ${oldVer} to ${newVer}
-    fi
+#  diff version_sdk /home/bcchain/.build/sdk/version >/dev/null 2>/dev/null
+#  if [[ "$?" != "0" ]]; then
+#    oldVer=$(cat /home/bcchain/.build/sdk/version 2>/dev/null | tr -d "\r")
+#    newVer=$(cat version_sdk|tr -d "\r")
+#    if [[ -z ${oldVer} ]]; then
+#      echo install sdk with version ${newVer}
+#    else
+    echo install sdk
+#    fi
     rm -fr /home/bcchain/.build/sdk 2>/dev/null
-    tar xvf sdk*.tar.gz -C /home/bcchain/.build >/dev/null
-  fi
+    mkdir /home/bcchain/.build/sdk
+    tar xvf sdk*.tar.gz -C /home/bcchain/.build/sdk >/dev/null
+    chmod 777 -R /home/bcchain/.build/sdk
+#  fi
 
-  diff version_thirdparty /home/bcchain/.build/thirdparty/version >/dev/null 2>/dev/null
-  if [[ "$?" != "0" ]]; then
-    oldVer=$(cat /home/bcchain/.build/thirdparty/version 2>/dev/null | tr -d "\r")
-    newVer=$(cat version_thirdparty|tr -d "\r")
-    if [[ -z ${oldVer} ]]; then
-      echo install thirdparty packages with version ${newVer}
-    else
-      echo update thirdparty packages from version ${oldVer} to ${newVer}
-    fi
+#  diff version_thirdparty /home/bcchain/.build/thirdparty/version >/dev/null 2>/dev/null
+#  if [[ "$?" != "0" ]]; then
+#    oldVer=$(cat /home/bcchain/.build/thirdparty/version 2>/dev/null | tr -d "\r")
+#    newVer=$(cat version_thirdparty|tr -d "\r")
+#    if [[ -z ${oldVer} ]]; then
+#      echo install thirdparty packages with version ${newVer}
+#    else
+    echo update thirdparty packages
+#    fi
     rm -fr /home/bcchain/.build/thirdparty 2>/dev/null
-    tar xvf third_party*.tar.gz -C /home/bcchain/.build >/dev/null
-  fi
+    mkdir /home/bcchain/.build/thirdparty
+    tar xvf thirdparty*.tar.gz -C /home/bcchain/.build/thirdparty >/dev/null
+    chmod 777 -R /home/bcchain/.build/thirdparty
+#  fi
   
   echo "End of copy files."
   
