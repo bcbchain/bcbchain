@@ -16,7 +16,7 @@ import (
 	"github.com/bcbchain/sdk/sdk"
 	"contract/stubcommon/common"
 	stubType "contract/stubcommon/types"
-	tmcommon "github.com/tendermint/tmlibs/common"
+	tmcommon "github.com/bcbchain/bclib/tendermint/tmlibs/common"
 	"github.com/bcbchain/sdk/sdk/types"
 	{{- if ne (len .IFunctions) 0}}
 	. "contract/{{$.OrgID}}/code/{{$.DirectionName}}/v{{$.Version}}/{{$.DirectionName}}"

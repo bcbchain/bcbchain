@@ -23,11 +23,11 @@ import (
 	"contract/stubcommon/common"
 	"contract/stubcommon/softforks"
 	stubType "contract/stubcommon/types"
-	tmcommon "github.com/tendermint/tmlibs/common"
+	tmcommon "github.com/bcbchain/bclib/tendermint/tmlibs/common"
 	"github.com/bcbchain/sdk/sdk/types"
 	. "contract/{{$.OrgID}}/code/{{$.DirectionName}}/v{{$.Version}}/{{$.DirectionName}}"
 
-	"github.com/tendermint/tmlibs/log"
+	"github.com/bcbchain/bclib/tendermint/tmlibs/log"
 	{{- if (hasParam .MFunctions)}}
 	"github.com/bcbchain/sdk/sdk/rlp"
 	{{- end}}

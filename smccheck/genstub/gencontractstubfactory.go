@@ -15,7 +15,7 @@ import (
 	"contract/stubcommon/common"
 	"contract/stubcommon/types"
 	"fmt"
-	"github.com/tendermint/tmlibs/log"
+	"github.com/bcbchain/bclib/tendermint/tmlibs/log"
 
 	{{- range $i,$directionName := $.DirectionNames}}
 	{{getName $i $.PackageNames}}{{replace (version $i $.Versions)}} "contract/{{getOrgID $i $.OrgIDs}}/stub/{{$directionName}}/v{{version $i $.Versions}}/{{$directionName}}"

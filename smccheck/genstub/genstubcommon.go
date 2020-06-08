@@ -53,7 +53,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/tendermint/tmlibs/common"
+	"github.com/bcbchain/bclib/tendermint/tmlibs/common"
 )
 
 const (

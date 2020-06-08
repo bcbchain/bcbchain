@@ -37,8 +37,8 @@ import (
 	"contract/stubcommon/common"
 	"contract/stubcommon/softforks"
 	abci "github.com/tendermint/abci/types"
-	tmcommon "github.com/tendermint/tmlibs/common"
-	"github.com/tendermint/tmlibs/log"
+	tmcommon "github.com/bcbchain/bclib/tendermint/tmlibs/common"
+	"github.com/bcbchain/bclib/tendermint/tmlibs/log"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -74,7 +74,7 @@ func Invoke(req map[string]interface{}) (interface{}, error) {
 func invoke(smc sdk.ISmartContract) types.Response {
 
 	var response types.Response
-	gls.Mgr.SetValues(gls.Values{gls.SDKKey: smc}, func() {
+	bcbgls.Mgr.SetValues(bcbgls.Values{bcbgls.SDKKey: smc}, func() {
 		contractStub := stub.NewStub(smc, logger)
 		if contractStub == nil {
 			response.Code = sdkType.ErrInvalidAddress
@@ -109,7 +109,7 @@ func InitChain(req map[string]interface{}) (interface{}, error) {
 func initChain(smc sdk.ISmartContract) types.Response {
 
 	var response types.Response
-	gls.Mgr.SetValues(gls.Values{gls.SDKKey: smc}, func() {
+	bcbgls.Mgr.SetValues(bcbgls.Values{bcbgls.SDKKey: smc}, func() {
 		contractStub := stub.NewStub(smc, logger)
 		if contractStub == nil {
 			response.Code = sdkType.ErrInvalidAddress
@@ -144,7 +144,7 @@ func UpdateChain(req map[string]interface{}) (interface{}, error) {
 func updateChain(smc sdk.ISmartContract) types.Response {
 
 	var response types.Response
-	gls.Mgr.SetValues(gls.Values{gls.SDKKey: smc}, func() {
+	bcbgls.Mgr.SetValues(bcbgls.Values{bcbgls.SDKKey: smc}, func() {
 		contractStub := stub.NewStub(smc, logger)
 		if contractStub == nil {
 			response.Code = sdkType.ErrInvalidAddress
@@ -179,7 +179,7 @@ func Mine(req map[string]interface{}) (interface{}, error) {
 func mine(smc sdk.ISmartContract) types.Response {
 
 	var response types.Response
-	gls.Mgr.SetValues(gls.Values{gls.SDKKey: smc}, func() {
+	bcbgls.Mgr.SetValues(bcbgls.Values{bcbgls.SDKKey: smc}, func() {
 		contractStub := stub.NewStub(smc, logger)
 		if contractStub == nil {
 			response.Code = sdkType.ErrInvalidAddress
@@ -361,7 +361,7 @@ func createSmcEx(transID, txID int64, callParam types.RPCInvokeCallParam) sdk.IS
 	}
 
 	smc := &sdkimpl.SmartContract{}
-	gls.Mgr.SetValues(gls.Values{gls.SDKKey: smc}, func() {
+	bcbgls.Mgr.SetValues(bcbgls.Values{bcbgls.SDKKey: smc}, func() {
 		llState := llstate.NewLowLevelSDB(smc, transID, txID)
 		smc.SetLlState(llState)
 
