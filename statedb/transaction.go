@@ -71,8 +71,6 @@ func (t *Transaction) Commit() {
 	batch := t.stateDB.sdb.NewBatch()
 	originData := make(map[string][]byte, len(t.buffer))
 
-	bb, _ := jsoniter.Marshal(t.buffer)
-	fmt.Println(string(bb))
 	for k, v := range t.buffer {
 
 		// get origin data

@@ -306,7 +306,6 @@ func SetAccountNonce(transID, txID int64, exAddress types.Address, nonce uint64)
 		nonceBuffer[key] = resBytes
 		trans.Transaction.Set(key, resBytes)
 	}
-	fmt.Println(childKey, string(accountData))
 	nonceBuffer[childKey] = accountData
 	trans.Transaction.Set(childKey, accountData)
 

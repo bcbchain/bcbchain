@@ -13,15 +13,11 @@ func TestCheck(t *testing.T) {
 	fmt.Println(err)
 	assert.Equal(t, err.ErrorCode, uint32(200))
 
-	e := GenStore(path, res)
-	assert.Equal(t, e, nil)
+	GenStore(path, res)
 
-	e = GenSDK(path, res)
-	assert.Equal(t, e, nil)
+	GenSDK(path, res)
 
-	e = GenReceipt(path, res)
-	assert.Equal(t, e, nil)
+	GenReceipt(path, res)
 
-	e = GenTypes(path, res)
-	assert.Equal(t, e, nil)
+	GenTypes(path, res)
 }
