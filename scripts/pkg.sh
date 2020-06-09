@@ -132,7 +132,7 @@ for PLATFORM in $(find ./build/pkg -mindepth 1 -maxdepth 1 -type d); do
 	OSARCH=$(basename "${PLATFORM}")
 	echo "--> ${OSARCH}"
 
-	chmod 777 -R "$PLATFORM"
+	chmod -R 777 "$PLATFORM"
 	pushd "$PLATFORM" >/dev/null 2>&1
 	tar -zcf "../${OSARCH}.tar.gz" ./*
 	popd >/dev/null 2>&1
