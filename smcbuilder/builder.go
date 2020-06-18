@@ -19,6 +19,7 @@ import (
 	"github.com/spf13/viper"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -184,6 +185,11 @@ func (b *Builder) GetContractDllPath(transID int64, txID int64, orgID string) (s
 		panic(err)
 	}
 
+	err = b.replaceImport(filepath.Join(tempDirName, "src", "contract"))
+	if err != nil {
+		return "", err
+	}
+
 	_, genErr := smccheck.Gen(filepath.Join(tempDirName, "src", "contract"), "", "", contractInfoList)
 	if genErr.ErrorCode != types.CodeOK {
 		return "", errors.New(genErr.ErrorDesc)
@@ -302,6 +308,11 @@ func (b *Builder) BuildContract(transID int64, txID int64, contractMeta std.Cont
 	err = os.MkdirAll(targetBinPath, 0750)
 	if err != nil {
 		panic(err)
+	}
+
+	err = b.replaceImport(filepath.Join(tempDirName, "src", "contract"))
+	if err != nil {
+		return std.BuildResult{Code: types.ErrInvalidParameter, Error: err.Error()}
 	}
 
 	genResult, genErr := smccheck.Gen(filepath.Join(tempDirName, "src", "contract"), contractMeta.Name, contractMeta.Version, contractInfoList)
@@ -698,4 +709,39 @@ func (b *Builder) checkRegex(obj string, regex string) bool {
 		return false
 	}
 	return r.MatchString(obj)
+}
+
+func (b *Builder) replaceImport(p string) error {
+	return filepath.Walk(p, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if info.IsDir() {
+			return nil
+		}
+
+		if !strings.HasSuffix(info.Name(), ".go") {
+			return nil
+		}
+
+		var cmd *exec.Cmd
+		if runtime.GOOS == "darwin" {
+			cmd = exec.Command("sed", "-i", "", `s/blockchain\/smcsdk/github.com\/bcbchain\/sdk/g`, path)
+		} else if runtime.GOOS == "linux" {
+			cmd = exec.Command("sed", "-i", `s/blockchain\/smcsdk/github.com\/bcbchain\/sdk/g`, path)
+		} else {
+			return errors.New("Don't support current os. ")
+		}
+
+		var out bytes.Buffer
+		cmd.Stderr = &out
+		err = cmd.Run()
+		if err != nil {
+			fmt.Println("build contract replace import failed:", string(out.Bytes()))
+			b.Logger.Error("build contract replace import failed", "error", string(out.Bytes()))
+			return err
+		}
+		return nil
+	})
 }

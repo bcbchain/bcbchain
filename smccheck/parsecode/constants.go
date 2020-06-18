@@ -62,6 +62,7 @@ var WhiteListPKG = map[string]struct{}{
 
 // WhiteListPkgPrefix - packages start with these paths are all allowed
 var WhiteListPkgPrefix = []string{
+	"\"blockchain/smcsdk/sdk",
 	"\"github.com/bcbchain/sdk/sdk",
 }
 

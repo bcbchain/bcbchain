@@ -42,6 +42,7 @@ github.com/aws/aws-sdk-go-v2 v0.18.0/go.mod h1:JWVYvqSMppoMJC0x5wdwiImzgXTI9FuZw
 github.com/bcbchain/bclib v0.0.0-20200529120820-171f2d2a0d85/go.mod h1:xYTfNCxGSL8tLOD+x1xtD7RpgdKVbdhJLq5SbWnYg8A=
 github.com/bcbchain/bclib v0.0.0-20200529124754-127c5783d369 h1:5uG4EtFnQbmu54WuARE0uS6cwiSJz3YDyYwwTuALl0A=
 github.com/bcbchain/bclib v0.0.0-20200529124754-127c5783d369/go.mod h1:3ThQpn+mqoqPgOwzd/LG2UEfcdsMO+KZiDRyGelNa7s=
+github.com/bcbchain/bclib v0.0.0-20200604101126-5bd6cff2be45/go.mod h1:ozJz0YzRRuicYjyG6GKpiTa7f7fD0+uLXum3nxwfx8g=
 github.com/bcbchain/sdk v0.0.0-20200529121232-bb3d3dc8a9d6/go.mod h1:IHRHbGn/BtzQiyFLrWZgB3ppB2K4yozE/KgNvaotHx4=
 github.com/bcbchain/sdk v0.0.0-20200601024849-70dea4da7a40 h1:xAPyc55AKOPwR7mUL4P4SMQktUEyq/+wpeUarR6EBPw=
 github.com/bcbchain/sdk v0.0.0-20200601024849-70dea4da7a40/go.mod h1:3WDeyXYqIB02gR61ATw3OTk4vayUPe9QhyrCjxV2WuU=

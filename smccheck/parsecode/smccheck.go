@@ -253,7 +253,7 @@ func checkImportWhitelist(res *Result) {
 	for imp := range res.AllImports {
 		p := strings.TrimSpace(imp.Path)
 		p = strings.Replace(p, "\"", "", -1)
-		if strings.HasPrefix(p, "github.com/bcbchain/sdk/sdk") {
+		if strings.HasPrefix(p, "github.com/bcbchain/sdk/sdk") || strings.HasPrefix(p, "blockchain/smcsdk/sdk") {
 			continue
 		}
 		if _, ok := whitelist[p]; !ok {

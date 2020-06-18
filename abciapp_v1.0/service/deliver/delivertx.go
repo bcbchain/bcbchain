@@ -21,12 +21,12 @@ import (
 	bctx "github.com/bcbchain/bcbchain/abciapp_v1.0/tx/tx"
 	bctypes "github.com/bcbchain/bcbchain/abciapp_v1.0/types"
 	"github.com/bcbchain/bcbchain/common/statedbhelper"
+	"github.com/bcbchain/bclib/bn"
 	"github.com/bcbchain/bclib/tendermint/abci/types"
 	"github.com/bcbchain/bclib/tendermint/go-crypto"
 	"github.com/bcbchain/bclib/tendermint/tmlibs/common"
 	tx2 "github.com/bcbchain/bclib/tx/v2"
 	types2 "github.com/bcbchain/bclib/types"
-	"github.com/bcbchain/sdk/sdk/bn"
 	"github.com/bcbchain/sdk/sdk/rlp"
 	"github.com/bcbchain/sdk/sdk/std"
 )

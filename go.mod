@@ -3,7 +3,7 @@ module github.com/bcbchain/bcbchain
 go 1.14
 
 require (
-	github.com/bcbchain/bclib v0.0.0-20200529124754-127c5783d369
+	github.com/bcbchain/bclib v0.0.0-20200604101126-5bd6cff2be45
 	github.com/bcbchain/sdk v0.0.0-20200601024849-70dea4da7a40
 	github.com/bcbchain/tendermint v0.0.0-20200601025335-1a22ec73e0f3
 	github.com/btcsuite/btcd v0.20.1-beta
