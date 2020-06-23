@@ -65,11 +65,11 @@ func NewBCChainApplication(config common.Config, logger log.Loggerf) *BCChainApp
 	app.connDeliver.SetChainID(chainID)
 	crypto.SetChainId(chainID)
 
-	adapterIns := adapter.GetInstance()
-	adapterIns.Init(logger, 32333)
-	adapter.SetSdbCallback(statedbhelper.AdapterGetCallBack, statedbhelper.AdapterSetCallBack, builderhelper.AdapterBuildCallBack)
-
 	if checkGenesisChainVersion() == 0 {
+		adapterIns := adapter.GetInstance()
+		adapterIns.Init(logger, 32333)
+		adapter.SetSdbCallback(statedbhelper.AdapterGetCallBack, statedbhelper.AdapterSetCallBack, builderhelper.AdapterBuildCallBack)
+
 		app.appv1 = appv1.NewBCChainApplication(logger)
 	}
 	logger.Info("Init bcchain end")

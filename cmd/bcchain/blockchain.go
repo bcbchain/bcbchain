@@ -1,18 +1,18 @@
 package main
 
 import (
+	"fmt"
 	bcchain "github.com/bcbchain/bcbchain/abciapp/app"
 	"github.com/bcbchain/bcbchain/abciapp/common"
-	"github.com/bcbchain/bcbchain/version"
 	"github.com/bcbchain/bcbchain/smcdocker"
-	"fmt"
+	"github.com/bcbchain/bcbchain/version"
 	"os"
 	"path/filepath"
 
-	"github.com/spf13/cobra"
 	"github.com/bcbchain/bclib/tendermint/abci/server"
 	cmn "github.com/bcbchain/bclib/tendermint/tmlibs/common"
 	tmlog "github.com/bcbchain/bclib/tendermint/tmlibs/log"
+	"github.com/spf13/cobra"
 )
 
 var (

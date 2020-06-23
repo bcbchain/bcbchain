@@ -90,11 +90,7 @@ for arch in "${arch_list[@]}"; do
 		if [[ "$XC_EXCLUDE" !=  *" $os/$arch "* ]]; then
 			echo "--> copy to $os/$arch"
       cp -rf bundle/setup "build/pkg/${os}_${arch}/"
-      if [ -f "build/pkg/${os}_${arch}/pieces/smcrunsvc_${os}" ];then
-        mv "build/pkg/${os}_${arch}/pieces/smcrunsvc_${os}" "build/pkg/${os}_${arch}/pieces/smcrunsvc"
-      else
-        mv "build/pkg/${os}_${arch}/pieces/smcrunsvc.exe_${os}" "build/pkg/${os}_${arch}/pieces/smcrunsvc.exe"
-      fi
+      mv "build/pkg/${os}_${arch}/pieces/smcrunsvc" "build/pkg/${os}_${arch}/pieces/smcrunsvc"
       rm -f "build/pkg/${os}_${arch}/pieces"/smcrunsvc*_*
       for CHAINID in $(find ./bundle/.config -mindepth 1 -maxdepth 1 -type d); do
 	      CHAIN=$(basename "${CHAINID}")
