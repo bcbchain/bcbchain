@@ -93,6 +93,90 @@ func Check(inPath string) (res *Result, err types.Error) {
 	return
 }
 
+func CheckEX(inPath string) (res *Result, paramsTypes map[string]string, err types.Error) {
+	err.ErrorCode = types.CodeOK
+
+	rs := checkFiles(inPath)
+
+	fSet := token.NewFileSet()
+	// parseDir 實際並不能遞歸檢查多層級目錄，需要自己去遞歸檢查。實際解析到的也只有一個pkg
+	pkgMap, err0 := parser.ParseDir(fSet, inPath, isContractFile, parser.ParseComments)
+	if err0 != nil {
+		panic(err0)
+	}
+
+	if len(pkgMap) != 1 {
+		err.ErrorDesc = "parse failed, no pkg or more than 1 pkg\n"
+	}
+
+	v := newVisitor()
+	v.initTxAndMsgCallee()
+	for _, pkg := range pkgMap {
+		newKeys := resortFiles(pkg.Files)
+		for _, path := range newKeys {
+			node := pkg.Files[path]
+			// 判断是否符合utf-8要求
+			if !isUTF8Encode(path) {
+				err.ErrorDesc += "parse failed, contract file encode not utf8\n"
+			}
+
+			ast.Walk(v, node)
+			importsCollector(v.res)
+		}
+
+		// if ITx/IMessage any interface be used in InitChain,UpdateChain or Mine, then report error
+		v.parseCallEx(txAndMsgCallee, pkg.Files)
+
+		// if GetTransferToMe interface be used in any method, then mark flag to true;
+		// it means this method require transfer token to contract account before it's called;
+		v.parseCall(transferCallee, pkg.Files)
+
+		// The basic type of float64/float32 is forbidden in contract
+		// The expression of panic is forbidden in contract
+		// The expression of for range is forbidden in contract
+		// ContractStructure's member variable cannot be called by direct
+		v.check(pkg.Files)
+
+		// check ibc function count and prototype
+		err.ErrorDesc += v.checkIBC()
+
+		// The cycle call is forbidden in contract, include recursive, eg: A -> B, B -> C, C -> A.
+		v.checkCycleCall(pkg.Files)
+
+		// if Emit a standard receipt in contract, then report error
+		v.parseEmitCall(pkg.Files)
+	}
+
+	// check file about flags use times
+	err.ErrorDesc += checkFlag(v, fSet, rs)
+
+	//v.printContractInfo()
+	checkImportConflict(v.res)
+	checkImportWhitelist(v.res)
+	if v.res.ErrFlag {
+		for idx, pos := range v.res.ErrorPos {
+			err.ErrorDesc += v.res.ErrorDesc[idx] + "\n"
+			err.ErrorDesc += fmt.Sprintf("%s %d\n", fSet.Position(pos).Filename, fSet.Position(pos).Line)
+		}
+	}
+
+	if len(err.ErrorDesc) != 0 {
+		err.ErrorCode = 500
+		fmt.Println(err.ErrorDesc)
+		return
+	}
+	res = v.res
+
+	paramsTypes = make(map[string]string, 0)
+	for _, function := range res.Functions {
+		Name := function.Name
+		proto := CreatePrototype(function.Method)
+		paramsTypes[Name] = proto
+	}
+
+	return
+}
+
 func resortFiles(files map[string]*ast.File) []string {
 	var found bool
 	newKeys := make([]string, len(files))
@@ -310,14 +394,16 @@ func checkFiles(inPath string) []*Report {
 	i2 := i1 - 1
 	i3 := i2 - 1
 
-	if pathSplit[i1] != pathSplit[i3] {
-		panic("wrong path: error direction name")
-	}
-	if !strings.HasPrefix(pathSplit[i2], "v") {
-		panic("wrong path: error version format")
-	}
-	if !checkRegex(pathSplit[i2][1:], versionExpr) {
-		panic("wrong path: error version format")
+	if pathSplit[i1] == pathSplit[i3] {
+		if pathSplit[i1] != pathSplit[i3] {
+			panic("wrong path: error direction name")
+		}
+		if !strings.HasPrefix(pathSplit[i2], "v") {
+			panic("wrong path: error version format")
+		}
+		if !checkRegex(pathSplit[i2][1:], versionExpr) {
+			panic("wrong path: error version format")
+		}
 	}
 
 	rs := initReports()
