@@ -9,6 +9,7 @@ import (
 	"github.com/bcbchain/bclib/tendermint/go-crypto"
 )
 
+// todo 返回的结果添加一个并发能力值字段。
 func (conn *QueryConnection) BCInfo(req abci.RequestInfo) (resInfo abci.ResponseInfo) {
 	appState := statedbhelper.GetWorldAppState(0, 0)
 

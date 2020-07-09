@@ -13,9 +13,9 @@ import (
 	"github.com/bcbchain/bcbchain/version"
 	"github.com/bcbchain/bclib/algorithm"
 	"github.com/bcbchain/bclib/jsoniter"
+	"github.com/bcbchain/bclib/tendermint/go-crypto"
 	types2 "github.com/bcbchain/bclib/types"
 	"github.com/bcbchain/sdk/sdk/std"
-	"github.com/bcbchain/bclib/tendermint/go-crypto"
 	"strings"
 
 	appv1 "github.com/bcbchain/bcbchain/abciapp_v1.0/app"
@@ -64,6 +64,8 @@ func NewBCChainApplication(config common.Config, logger log.Loggerf) *BCChainApp
 	app.connCheck.SetChainID(chainID)
 	app.connDeliver.SetChainID(chainID)
 	crypto.SetChainId(chainID)
+
+	app.connDeliver.RunReceiptParser() // todo
 
 	if checkGenesisChainVersion() == 0 {
 		adapterIns := adapter.GetInstance()

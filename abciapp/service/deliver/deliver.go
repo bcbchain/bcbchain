@@ -1,12 +1,12 @@
 package deliver
 
 import (
-	"github.com/bcbchain/bcbchain/common/statedbhelper"
-	"github.com/bcbchain/bclib/types"
 	"container/list"
+	"github.com/bcbchain/bcbchain/common/statedbhelper"
 	abci "github.com/bcbchain/bclib/tendermint/abci/types"
 	"github.com/bcbchain/bclib/tendermint/go-crypto"
 	"github.com/bcbchain/bclib/tendermint/tmlibs/log"
+	"github.com/bcbchain/bclib/types"
 	"strconv"
 )
 
@@ -28,6 +28,8 @@ type AppDeliver struct {
 	fee            int64                    //总费用
 	rewards        map[types.Address]int64  //奖励策略
 	scGenesis      []*abci.SideChainGenesis // 侧链创世信息
+
+	rp *ReceiptParser //
 }
 
 //SetLogger set logger
@@ -131,3 +133,12 @@ func (app *AppDeliver) TransID() int64 {
 }
 
 // ------------- add for support v1 transaction end ----------------
+
+// todo 开启收据解析协程。
+func (app *AppDeliver) RunReceiptParser() {
+	app.rp = &ReceiptParser{ // todo make chan field.
+		receiptChan:  nil,
+		endBlockChan: nil,
+	}
+	go app.rp.ReceiptsRoutine()
+}
