@@ -1,17 +1,19 @@
 package app
 
 import (
+	app2 "github.com/bcbchain/bcbchain/abciapp/app"
 	check2 "github.com/bcbchain/bcbchain/abciapp/service/check"
 	deliver2 "github.com/bcbchain/bcbchain/abciapp/service/deliver"
-	"github.com/bcbchain/bcbchain/version"
 	"github.com/bcbchain/bcbchain/abciapp_v1.0/bcerrors"
 	"github.com/bcbchain/bcbchain/abciapp_v1.0/service/check"
 	"github.com/bcbchain/bcbchain/abciapp_v1.0/service/deliver"
 	"github.com/bcbchain/bcbchain/abciapp_v1.0/service/query"
 	"github.com/bcbchain/bcbchain/abciapp_v1.0/smcrunctl"
 	"github.com/bcbchain/bcbchain/abciapp_v1.0/statedb"
+	"github.com/bcbchain/bcbchain/version"
 	"github.com/bcbchain/bclib/tendermint/abci/types"
 	"github.com/bcbchain/bclib/tendermint/tmlibs/log"
+	"sync"
 )
 
 type BCChainApplication struct {
@@ -83,6 +85,31 @@ func (app *BCChainApplication) Query(reqQuery types.RequestQuery) types.Response
 func (app *BCChainApplication) CheckTx(tx []byte, connV2 *check2.AppCheck) types.ResponseCheckTx {
 
 	return app.connCheck.CheckTx(tx, connV2)
+}
+func (app *BCChainApplication) CheckTxV1Concurrency(tx []byte, wg sync.WaitGroup, connV2 *check2.AppCheck, resultChan *app2.ResultPool, index int) {
+	defer wg.Done()
+	result := app.connCheck.CheckTxConcurrency(tx, connV2)
+	result.TxID = index
+	resultChan.ResultChan <- *result
+}
+
+func (app *BCChainApplication) RunCheckTxV1Concurrency(result types.Result, responsePool *app2.ResponsePool, connV2 *check2.AppCheck, wg sync.WaitGroup) {
+
+	defer wg.Done()
+	if result.Errorlog != nil {
+		responseChanOrder := app2.ResponseChanOrder{
+			Response: nil,
+			Index:    result.TxID,
+		}
+		responsePool.ResponseOrder <- responseChanOrder
+	}
+	response := app.connCheck.RunCheckTxV1Concurrency(result, connV2)
+	responseChanOrder := app2.ResponseChanOrder{
+		Response: response,
+		Index:    result.TxID,
+	}
+	//responsePool.Response <- response
+	responsePool.ResponseOrder <- responseChanOrder
 }
 
 func (app *BCChainApplication) DeliverTx(tx []byte, appV2 *deliver2.AppDeliver) types.ResponseDeliverTx {

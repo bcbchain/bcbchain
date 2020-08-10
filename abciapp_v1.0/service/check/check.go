@@ -1,6 +1,7 @@
 package check
 
 import (
+	"errors"
 	"github.com/bcbchain/bcbchain/abciapp/service/check"
 	"strings"
 	"time"
@@ -168,4 +169,28 @@ func (conn *CheckConnection) CheckTx(tx []byte, connV2 *check.AppCheck) types.Re
 	}
 
 	return conn.CheckBCTx(tx, connV2)
+}
+
+func (conn *CheckConnection) CheckTxConcurrency(tx []byte, connV2 *check.AppCheck) *types.Result {
+	conn.logger.Info("Recv ABCI interface: CheckTxCheckTxConcurrency", "tx", string(tx))
+
+	if conn.docker == nil {
+		conn.logger.Error("can't find checkTx docker ")
+		return &types.Result{
+			Errorlog: errors.New("can't find checkTx docker "),
+		}
+	}
+
+	return conn.CheckBCTxV1Concurrency(tx, connV2)
+}
+
+func (conn *CheckConnection) RunCheckTxV1Concurrency(result types.Result, connV2 *check.AppCheck) types.ResponseCheckTx {
+	conn.logger.Debug("Recv ABCI interface: RunCheckTxV1Concurrency", "transaction", result.TxV1Result.Transaction)
+
+	if connV2 == nil {
+		return conn.RunCheckBCTxConcurrency(result)
+	} else {
+		return conn.RunCheckBCTxExConcurrency(result, connV2)
+	}
+
 }

@@ -58,5 +58,5 @@ func (rp *ReceiptParser) parseReceipt(receipt []common.KVPair) {
 }
 
 func (rp *ReceiptParser) pubReceiptResponse() {
-	// todo send to ResponseChan
+	// todo send to Response
 }

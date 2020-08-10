@@ -1,10 +1,12 @@
 package check
 
 import (
-	types2 "github.com/bcbchain/bclib/types"
+	app2 "github.com/bcbchain/bcbchain/abciapp/app"
 	"github.com/bcbchain/bclib/tendermint/abci/types"
 	"github.com/bcbchain/bclib/tendermint/go-crypto"
 	"github.com/bcbchain/bclib/tendermint/tmlibs/log"
+	types2 "github.com/bcbchain/bclib/types"
+	"sync"
 )
 
 //AppCheck object of check tx
@@ -31,6 +33,26 @@ func (app *AppCheck) CheckTx(tx []byte) types.ResponseCheckTx {
 	return app.CheckBCTx(tx)
 }
 
+//CheckTxV2Concurrency check tx v2
+func (app *AppCheck) CheckTxV2Concurrency(tx []byte, wg sync.WaitGroup, resultChan *app2.ResultPool, index int) {
+	defer wg.Done()
+	app.logger.Info("Recv ABCI interface: CheckTxV2Concurrency", "tx", string(tx))
+
+	result := app.CheckBCTxV2Concurrency(tx, wg)
+	result.TxID = index
+	resultChan.ResultChan <- *result
+}
+
+//CheckTxV2Concurrency check tx v3
+func (app *AppCheck) CheckTxV3Concurrency(tx []byte, wg sync.WaitGroup, resultChan *app2.ResultPool, index int) {
+	defer wg.Done()
+	app.logger.Info("Recv ABCI interface: CheckTxV2Concurrency", "tx", string(tx))
+
+	result := app.CheckBCTxV3Concurrency(tx, wg)
+	result.TxID = index
+	resultChan.ResultChan <- *result
+}
+
 // ------------- add for support v1 transaction begin ----------------
 
 //RunCheckTx - invoked by v1 checkTx, if it's standard transfer method.
@@ -38,6 +60,49 @@ func (app *AppCheck) RunCheckTx(tx []byte, transaction types2.Transaction, pubKe
 	app.logger.Debug("Recv ABCI interface: CheckTx", "transaction", transaction)
 
 	return app.runCheckBCTx(tx, transaction, pubKey)
+}
+
+func (app *AppCheck) RunCheckTxV2Concurrency(result types.Result, responsePool *app2.ResponsePool, wg sync.WaitGroup) {
+	defer wg.Done()
+	app.logger.Debug("Recv ABCI interface: CheckTxConcurrency", "transaction", result.TxV2Result.Transaction)
+
+	if result.Errorlog != nil {
+		responseChanOrder := app2.ResponseChanOrder{
+			Response: nil,
+			Index:    result.TxID,
+		}
+		//responsePool.Response <- responseCheckTx
+		responsePool.ResponseOrder <- responseChanOrder
+	}
+	responseCheckTx := app.runCheckBCTxV2Concurrency(result)
+	responseChanOrder := app2.ResponseChanOrder{
+		Response: responseCheckTx,
+		Index:    result.TxID,
+	}
+	//responsePool.Response <- responseCheckTx
+	responsePool.ResponseOrder <- responseChanOrder
+
+}
+
+func (app *AppCheck) RunCheckTxV3Concurrency(result types.Result, responsePool *app2.ResponsePool, wg sync.WaitGroup) {
+	defer wg.Done()
+	app.logger.Debug("Recv ABCI interface: CheckTx", "transaction", result.TxV3Result.Transaction)
+
+	if result.Errorlog != nil {
+		responseChanOrder := app2.ResponseChanOrder{
+			Response: nil,
+			Index:    result.TxID,
+		}
+		//responsePool.Response <- responseCheckTx
+		responsePool.ResponseOrder <- responseChanOrder
+	}
+	responseCheckTx := app.runCheckBCTxV3Concurrency(result)
+	responseChanOrder := app2.ResponseChanOrder{
+		Response: responseCheckTx,
+		Index:    result.TxID,
+	}
+	//responsePool.Response <- responseCheckTx
+	responsePool.ResponseOrder <- responseChanOrder
 }
 
 // ------------- add for support v1 transaction end ----------------

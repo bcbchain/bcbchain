@@ -1,15 +1,15 @@
 package invokermgr
 
 import (
-	"github.com/bcbchain/bcbchain/abciapp/softforks"
-	"github.com/bcbchain/bclib/algorithm"
-	"github.com/bcbchain/bcbchain/common/statedbhelper"
-	"github.com/bcbchain/bcbchain/smcdocker"
-	"github.com/bcbchain/sdk/sdk/jsoniter"
-	"github.com/bcbchain/sdk/sdk/std"
-	"github.com/bcbchain/bclib/socket"
 	"errors"
 	"fmt"
+	"github.com/bcbchain/bcbchain/abciapp/softforks"
+	"github.com/bcbchain/bcbchain/common/statedbhelper"
+	"github.com/bcbchain/bcbchain/smcdocker"
+	"github.com/bcbchain/bclib/algorithm"
+	"github.com/bcbchain/bclib/socket"
+	"github.com/bcbchain/sdk/sdk/jsoniter"
+	"github.com/bcbchain/sdk/sdk/std"
 	"strings"
 	"sync"
 	"time"
@@ -740,8 +740,9 @@ func (im *InvokerMgr) getPayer(height int64, sender types.Address, tx types.Tran
 	}
 
 	// load contract buffer
+	// tx.Messages should have a example
 	contracts := make([]*std.Contract, 0)
-	for _, msg := range tx.Messages {
+	for _, msg := range tx.Messages { //tx的编码
 		contractSplit := strings.Split(msg.Contract, ".")
 		contractAddr := msg.Contract
 		if len(contractSplit) == 2 {

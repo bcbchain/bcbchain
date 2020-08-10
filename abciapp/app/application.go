@@ -7,21 +7,20 @@ import (
 	"github.com/bcbchain/bcbchain/abciapp/service/deliver"
 	"github.com/bcbchain/bcbchain/abciapp/service/query"
 	"github.com/bcbchain/bcbchain/abciapp/softforks"
+	appv1 "github.com/bcbchain/bcbchain/abciapp_v1.0/app"
 	"github.com/bcbchain/bcbchain/common/builderhelper"
 	"github.com/bcbchain/bcbchain/common/statedbhelper"
 	"github.com/bcbchain/bcbchain/smcrunctl/adapter"
 	"github.com/bcbchain/bcbchain/version"
 	"github.com/bcbchain/bclib/algorithm"
 	"github.com/bcbchain/bclib/jsoniter"
+	"github.com/bcbchain/bclib/tendermint/abci/types"
 	"github.com/bcbchain/bclib/tendermint/go-crypto"
+	cmn "github.com/bcbchain/bclib/tendermint/tmlibs/common"
+	"github.com/bcbchain/bclib/tendermint/tmlibs/log"
 	types2 "github.com/bcbchain/bclib/types"
 	"github.com/bcbchain/sdk/sdk/std"
 	"strings"
-
-	appv1 "github.com/bcbchain/bcbchain/abciapp_v1.0/app"
-	"github.com/bcbchain/bclib/tendermint/abci/types"
-	cmn "github.com/bcbchain/bclib/tendermint/tmlibs/common"
-	"github.com/bcbchain/bclib/tendermint/tmlibs/log"
 )
 
 //BCChainApplication object of application
@@ -40,6 +39,11 @@ type BCChainApplication struct {
 	chainVersion *int64
 	// update current chain version
 	updateChainVersion int64
+
+	txPool       *TxPool
+	resultPool   *ResultPool
+	responsePool *ResponsePool
+	txParser     *TxParser
 }
 
 //NewBCChainApplication create an application object
@@ -54,7 +58,13 @@ func NewBCChainApplication(config common.Config, logger log.Loggerf) *BCChainApp
 		logger:      logger,
 	}
 
-	softforks.Init()
+	app.txParser = NewTxParser(&app)
+
+	app.txPool = NewTxPool()
+	app.resultPool = NewResultPool()
+	app.responsePool = NewResponsePool()
+
+	softforks.Init() //存疑　bcbtest
 
 	app.connQuery.SetLogger(logger)
 	app.connCheck.SetLogger(logger)
@@ -65,12 +75,13 @@ func NewBCChainApplication(config common.Config, logger log.Loggerf) *BCChainApp
 	app.connDeliver.SetChainID(chainID)
 	crypto.SetChainId(chainID)
 
-	app.connDeliver.RunReceiptParser() // todo
+	//app.connDeliver.RunReceiptParser() // todo
+
+	adapterIns := adapter.GetInstance()
+	adapterIns.Init(logger, 32333)
+	adapter.SetSdbCallback(statedbhelper.AdapterGetCallBack, statedbhelper.AdapterSetCallBack, builderhelper.AdapterBuildCallBack)
 
 	if checkGenesisChainVersion() == 0 {
-		adapterIns := adapter.GetInstance()
-		adapterIns.Init(logger, 32333)
-		adapter.SetSdbCallback(statedbhelper.AdapterGetCallBack, statedbhelper.AdapterSetCallBack, builderhelper.AdapterBuildCallBack)
 
 		app.appv1 = appv1.NewBCChainApplication(logger)
 	}
@@ -116,7 +127,6 @@ func (app *BCChainApplication) QueryEx(reqQuery types.RequestQueryEx) types.Resp
 
 //CheckTx checkTx interface
 func (app *BCChainApplication) CheckTx(tx []byte) types.ResponseCheckTx {
-
 	var res types.ResponseCheckTx
 
 	splitTx := strings.Split(string(tx), ".")
@@ -127,9 +137,11 @@ func (app *BCChainApplication) CheckTx(tx []byte) types.ResponseCheckTx {
 				connV2 = app.connCheck
 			}
 			res = app.appv1.CheckTx(tx, connV2)
+			//go
 
 		} else if (splitTx[1] == "v2" || splitTx[1] == "v3") && app.ChainVersion() == 2 {
 			res = app.connCheck.CheckTx(tx)
+			//go
 		} else {
 			res.Code = types2.ErrLogicError
 			res.Log = "invalid transaction 1"
@@ -145,12 +157,51 @@ func (app *BCChainApplication) CheckTx(tx []byte) types.ResponseCheckTx {
 	return res
 }
 
+//CheckTx checkTxConcurrency interface
+func (app *BCChainApplication) checkTxConcurrency(tx []byte, responses chan<- *types.Response) {
+
+	//将收到的单笔交易发送到交易通道中
+	//当交易通道中的交易达到一定数量后
+	//发送一批交易到TxParser中进行交易的构造
+	app.txPool.TxChan <- tx
+
+	ResponseCheckTxMap := make(map[int]types.ResponseCheckTx, app.txParser.maxConcurrency)
+	for {
+		select {
+		case responseChanOrder := <-app.responsePool.ResponseOrder:
+			ResponseCheckTxMap[responseChanOrder.Index] = responseChanOrder.Response
+			if len(ResponseCheckTxMap) == app.txParser.maxConcurrency {
+				for i := 0; i < app.txParser.maxConcurrency; i++ {
+					responses <- types.ToResponseCheckTx(ResponseCheckTxMap[i])
+				}
+			}
+		}
+	}
+}
+
+func (app *BCChainApplication) CheckTxs(txs [][]byte) types.ResponseCheckTxs {
+
+	// TODO　启动一个协程发送tx
+	// go txRoutine()
+	responseCheckTxs := []types.ResponseCheckTx{}
+	for i, tx := range txs {
+		app.logger.Info("CheckTxs成功收到", "交易", i)
+		app.logger.Info("交易为", "tx", string(tx))
+		responseCheckTx := app.CheckTx(tx)
+		app.logger.Info("交易检查后", "responseCheckTx", responseCheckTx)
+		responseCheckTxs = append(responseCheckTxs, responseCheckTx)
+	}
+
+	return types.ResponseCheckTxs{responseCheckTxs}
+}
+
 //DeliverTx deliverTx interface
 func (app *BCChainApplication) DeliverTx(tx []byte) types.ResponseDeliverTx {
-
+	app.logger.Info("start DeliverTx")
 	var res types.ResponseDeliverTx
 
 	splitTx := strings.Split(string(tx), ".")
+	app.logger.Info("DeliverTx", "splitTx", splitTx)
 	if len(splitTx) == 5 {
 		if splitTx[1] == "v1" && app.appv1 != nil {
 			// if chain version never upgrade, give appv2 nil.
@@ -174,6 +225,21 @@ func (app *BCChainApplication) DeliverTx(tx []byte) types.ResponseDeliverTx {
 
 	res.TxHash = algorithm.CalcCodeHash(string(tx))
 	return res
+}
+
+//DeliverTx deliverTx interface
+func (app *BCChainApplication) DeliverTxs(txs [][]byte) types.ResponseDeliverTxs {
+	responseDeliverTxs := []types.ResponseDeliverTx{}
+
+	for i, tx := range txs {
+		app.logger.Info("DeliverTxs成功收到", "交易", i)
+		app.logger.Info("交易为", "tx", string(tx))
+		responseDeliverTx := app.DeliverTx(tx)
+		app.logger.Info("交易DeliverTx后", "tx", responseDeliverTx)
+		responseDeliverTxs = append(responseDeliverTxs, responseDeliverTx)
+	}
+
+	return types.ResponseDeliverTxs{responseDeliverTxs}
 }
 
 //Flush flush interface
