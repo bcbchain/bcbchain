@@ -8,48 +8,20 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 )
-
-type TxPool struct {
-	TxChan chan []byte
-}
-
-func NewTxPool() *TxPool {
-	return &TxPool{TxChan: make(chan []byte, 10000)}
-}
-
-type ResultPool struct {
-	ResultChan chan types.Result
-}
-
-func NewResultPool() *ResultPool {
-	return &ResultPool{ResultChan: make(chan types.Result, 1000)}
-}
-
-//记录Response的顺序，有序返回给socketsever
-type ResponseChanOrder struct {
-	Response types.ResponseCheckTx
-	Index    int
-}
-
-type ResponsePool struct {
-	ResponseChan  chan types.ResponseCheckTx
-	ResponseOrder chan ResponseChanOrder
-}
-
-func NewResponsePool() *ResponsePool {
-	return &ResponsePool{ResponseChan: make(chan types.ResponseCheckTx, 1000)}
-}
 
 type TxExecutor struct {
 	app        *BCChainApplication
 	Result     []types.Result
 	ResultChan chan []types.Result //目前是不带缓冲区的
 	wg         sync.WaitGroup
+	ticker     *time.Ticker
 }
 
 func (T *TxExecutor) Run() {
 	for {
+		T.app.logger.Info("CheckTxConcurrency--------9")
 		select {
 		case results := <-T.ResultChan:
 			T.wg.Add(len(results))
@@ -72,8 +44,9 @@ func (T *TxExecutor) Run() {
 	}
 }
 func (T *TxExecutor) PutTxs() {
+	var ticker = time.NewTicker(time.Second)
 	for {
-
+		T.app.logger.Info("CheckTxConcurrency--------8")
 		select {
 		case result := <-T.app.resultPool.ResultChan:
 			T.Result = append(T.Result, result)
@@ -81,8 +54,11 @@ func (T *TxExecutor) PutTxs() {
 				T.ResultChan <- T.Result
 				T.Result = *new([]types.Result)
 			}
+		case <-ticker.C:
+			T.ResultChan <- T.Result
+			T.Result = *new([]types.Result)
 		}
-		T.Run()
+
 	}
 }
 
@@ -100,6 +76,7 @@ func (T *TxParser) Run() {
 		case txs := <-T.TxReceiveChan:
 			T.wg.Add(len(txs))
 			for i, tx := range txs {
+				T.app.logger.Info("CheckTxConcurrency--------7")
 				//result的序号需要进行标识
 				result := &types.Result{}
 				splitTx := strings.Split(string(tx), ".")
@@ -133,27 +110,34 @@ func (T *TxParser) Run() {
 
 func (T *TxParser) PutRawTxs() {
 	var txs [][]byte
+	var ticker = time.NewTicker(time.Second)
 	for {
+		T.app.logger.Info("CheckTxConcurrency--------6")
 		select {
 		// 监听交易通道
 		case tx := <-T.app.txPool.TxChan:
+			T.app.logger.Info("CheckTxConcurrency--------tx", tx)
 			txs = append(txs, tx)
 			if len(txs) == runtime.NumCPU()*2 {
 				T.TxReceiveChan <- txs
 				txs = *new([][]byte)
 			}
+		case <-ticker.C:
+			T.TxReceiveChan <- txs
+			txs = *new([][]byte)
 		}
 	}
 }
 
 func NewTxParser(app *BCChainApplication) *TxParser {
+	app.logger.Info("CheckTxConcurrency--------3")
 	txParser := &TxParser{
 		maxConcurrency: runtime.NumCPU() * 2,
-		TxReceiveChan:  make(chan [][]byte, 0),
+		TxReceiveChan:  make(chan [][]byte, 10),
 		TxExecutor: &TxExecutor{
 			app:        app,
-			Result:     make([]types.Result, 0),
-			ResultChan: make(chan []types.Result, 0),
+			Result:     make([]types.Result, 10),
+			ResultChan: make(chan []types.Result, 10),
 		},
 		app: app,
 		wg:  sync.WaitGroup{},
