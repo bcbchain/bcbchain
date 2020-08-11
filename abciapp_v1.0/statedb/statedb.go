@@ -1,19 +1,19 @@
 package statedb
 
 import (
+	"encoding/json"
 	"github.com/bcbchain/bcbchain/abciapp_v1.0/prototype"
-	"github.com/bcbchain/bclib/algorithm"
 	"github.com/bcbchain/bcbchain/common/statedbhelper"
 	"github.com/bcbchain/bcbchain/statedb"
-	"encoding/json"
+	"github.com/bcbchain/bclib/algorithm"
 	"math/big"
 	"sort"
 	"strings"
 
 	"github.com/bcbchain/bcbchain/abciapp_v1.0/smc"
 	"github.com/bcbchain/bcbchain/abciapp_v1.0/types"
-	"github.com/pkg/errors"
 	abci "github.com/bcbchain/bclib/tendermint/abci/types"
+	"github.com/pkg/errors"
 )
 
 type StateDB struct {
@@ -541,7 +541,7 @@ func (sdb *StateDB) NewTxState(contractAddress smc.Address, senderAddress smc.Ad
 		StateDB:         sdb,
 		ContractAddress: contractAddress,
 		SenderAddress:   senderAddress,
-		Tx:              sdb.Transaction.NewTx(),
+		Tx:              sdb.Transaction.NewTx(nil),
 	}
 }
 

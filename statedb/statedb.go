@@ -3,11 +3,9 @@ package statedb
 import (
 	"github.com/bcbchain/bclib/bcdb"
 	"github.com/bcbchain/bclib/jsoniter"
-	"sync"
+	"runtime"
 	"sync/atomic"
 )
-
-var mu sync.Mutex
 
 type StateDB struct {
 	sdb      *bcdb.GILevelDB // state db
@@ -73,29 +71,42 @@ func (s *StateDB) Get(key string) []byte {
 	return value
 }
 
-func (s *StateDB) NewCommittableTransaction() *Transaction {
+func (s *StateDB) NewCommittableTransaction(maxTxCount, goRoutineCount int) *Transaction {
 
 	// There can only be one committable transaction at a time.
 	if s.committableTransaction != nil {
 		panic("must commit last transaction")
 	}
-
-	s.committableTransaction = &Transaction{
-		transactionID: s.calcTransactionID(true),
-		stateDB:       s,
-		buffer:        make(map[string][]byte),
-		committable:   true,
+	if goRoutineCount <= 0 {
+		goRoutineCount = 2 * runtime.NumCPU()
 	}
-	return s.committableTransaction
+
+	trans := &Transaction{
+		transactionID:  s.calcTransactionID(true),
+		stateDB:        s,
+		maxTxCount:     maxTxCount,
+		goRoutineCount: goRoutineCount,
+		wBuffer:        make(map[string][]byte),
+		rBuffer:        newKVbuffer(uint(maxTxCount * 256)),
+		committable:    true,
+	}
+	s.committableTransaction = trans
+	return trans
 }
 
-func (s *StateDB) NewRollbackTransaction() *Transaction {
+func (s *StateDB) NewRollbackTransaction(maxTxCount, goRoutineCount int) *Transaction {
+	if goRoutineCount <= 0 {
+		goRoutineCount = 2 * runtime.NumCPU()
+	}
 
 	return &Transaction{
-		transactionID: s.calcTransactionID(false),
-		stateDB:       s,
-		buffer:        make(map[string][]byte),
-		committable:   false,
+		transactionID:  s.calcTransactionID(false),
+		stateDB:        s,
+		maxTxCount:     maxTxCount,
+		goRoutineCount: goRoutineCount,
+		wBuffer:        make(map[string][]byte),
+		rBuffer:        newKVbuffer(uint(maxTxCount * 256)),
+		committable:    false,
 	}
 }
 
@@ -128,7 +139,7 @@ func (s *StateDB) calcTransactionID(committable bool) int64 {
 	if committable {
 		return atomic.AddInt64(&s.lastCommittableTransactionID, 1)
 	} else {
-		return -(atomic.AddInt64(&s.lastRollbackTransactionID, 1))
+		return atomic.AddInt64(&s.lastRollbackTransactionID, -1)
 	}
 }
 

@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"sync"
 
+	abci "github.com/bcbchain/bclib/tendermint/abci/types"
 	"github.com/bcbchain/sdk/sdk/jsoniter"
 	types2 "github.com/bcbchain/sdk/sdk/types"
-	abci "github.com/bcbchain/bclib/tendermint/abci/types"
 )
 
 var (
@@ -34,13 +34,21 @@ func Init(sdbName string, maxSnapshotCount int) {
 	stateDB = statedb.New(sdbName, maxSnapshotCount)
 }
 
+func InitX(sdb *statedb.StateDB, transMap map[int64]*Trans) {
+	stateDB = sdb
+	transactionMap = sync.Map{}
+	for id, tran := range transMap {
+		transactionMap.Store(id, tran)
+	}
+}
+
 //NewCommittableTransactionID create a committable transaction and return ID
 func NewCommittableTransactionID() (int64, *statedb.Transaction) {
 	if currentCommittableTransaction != nil {
 		return currentCommittableTransaction.ID(), currentCommittableTransaction
 	}
 
-	transaction := stateDB.NewCommittableTransaction()
+	transaction := stateDB.NewCommittableTransaction(2000, 0)
 	currentCommittableTransaction = transaction
 	transactionMap.Store(transaction.ID(), &Trans{
 		Transaction: transaction,
@@ -52,7 +60,7 @@ func NewCommittableTransactionID() (int64, *statedb.Transaction) {
 
 //NewRollbackTransactionID create a rollback transaction and return ID
 func NewRollbackTransactionID() (int64, *statedb.Transaction) {
-	transaction := stateDB.NewRollbackTransaction()
+	transaction := stateDB.NewRollbackTransaction(1, 0)
 	transactionMap.Store(transaction.ID(), &Trans{
 		Transaction: transaction,
 		TxMap:       make(map[int64]*statedb.Tx),
@@ -75,7 +83,7 @@ func NewTx(transID int64) int64 {
 	}
 	trans := temp.(*Trans)
 
-	tx := trans.Transaction.NewTx()
+	tx := trans.Transaction.NewTx(nil)
 	trans.TxMap[tx.ID()] = tx
 	return tx.ID()
 }
