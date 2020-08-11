@@ -6,6 +6,7 @@ import (
 	"github.com/bcbchain/bcbchain/abciapp/service/check"
 	"github.com/bcbchain/bcbchain/abciapp/service/deliver"
 	"github.com/bcbchain/bcbchain/abciapp/service/query"
+	types3 "github.com/bcbchain/bcbchain/abciapp/service/types"
 	"github.com/bcbchain/bcbchain/abciapp/softforks"
 	appv1 "github.com/bcbchain/bcbchain/abciapp_v1.0/app"
 	"github.com/bcbchain/bcbchain/common/builderhelper"
@@ -21,6 +22,7 @@ import (
 	types2 "github.com/bcbchain/bclib/types"
 	"github.com/bcbchain/sdk/sdk/std"
 	"strings"
+	"time"
 )
 
 //BCChainApplication object of application
@@ -40,10 +42,9 @@ type BCChainApplication struct {
 	// update current chain version
 	updateChainVersion int64
 
-	txPool       *TxPool
-	resultPool   *ResultPool
-	responsePool *ResponsePool
-	txParser     *TxParser
+	txPool       *types3.TxPool
+	resultPool   *types3.ResultPool
+	responsePool *types3.ResponsePool
 }
 
 //NewBCChainApplication create an application object
@@ -58,11 +59,9 @@ func NewBCChainApplication(config common.Config, logger log.Loggerf) *BCChainApp
 		logger:      logger,
 	}
 
-	app.txParser = NewTxParser(&app)
-
-	app.txPool = NewTxPool()
-	app.resultPool = NewResultPool()
-	app.responsePool = NewResponsePool()
+	app.txPool = types3.NewTxPool()
+	app.resultPool = types3.NewResultPool()
+	app.responsePool = types3.NewResponsePool()
 
 	softforks.Init() //存疑　bcbtest
 
@@ -158,22 +157,35 @@ func (app *BCChainApplication) CheckTx(tx []byte) types.ResponseCheckTx {
 }
 
 //CheckTx checkTxConcurrency interface
-func (app *BCChainApplication) checkTxConcurrency(tx []byte, responses chan<- *types.Response) {
+func (app *BCChainApplication) CheckTxConcurrency(tx []byte, responses chan<- *types.Response) {
+	app.logger.Info("n--------1")
+	txParser := NewTxParser(app)
 
 	//将收到的单笔交易发送到交易通道中
 	//当交易通道中的交易达到一定数量后
 	//发送一批交易到TxParser中进行交易的构造
+	app.logger.Info("CheckTxConcurrency--------2")
 	app.txPool.TxChan <- tx
-
-	ResponseCheckTxMap := make(map[int]types.ResponseCheckTx, app.txParser.maxConcurrency)
+	app.logger.Info("并发check收到tx", tx)
+	ResponseCheckTxMap := make(map[int]types.ResponseCheckTx, txParser.maxConcurrency)
+	var ticker = time.NewTicker(time.Millisecond * 500)
 	for {
 		select {
 		case responseChanOrder := <-app.responsePool.ResponseOrder:
 			ResponseCheckTxMap[responseChanOrder.Index] = responseChanOrder.Response
-			if len(ResponseCheckTxMap) == app.txParser.maxConcurrency {
-				for i := 0; i < app.txParser.maxConcurrency; i++ {
+			if len(ResponseCheckTxMap) == txParser.maxConcurrency {
+				app.logger.Info("CheckTxConcurrency--------4")
+				for i := 0; i < txParser.maxConcurrency; i++ {
 					responses <- types.ToResponseCheckTx(ResponseCheckTxMap[i])
+					app.logger.Info("并发check", ResponseCheckTxMap[i])
 				}
+			}
+
+		case <-ticker.C:
+			for i := 0; i < txParser.maxConcurrency; i++ {
+				app.logger.Info("CheckTxConcurrency--------5")
+				responses <- types.ToResponseCheckTx(ResponseCheckTxMap[i])
+				app.logger.Info("并发check", ResponseCheckTxMap[i])
 			}
 		}
 	}
