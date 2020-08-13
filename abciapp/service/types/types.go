@@ -7,7 +7,7 @@ type TxPool struct {
 }
 
 func NewTxPool() *TxPool {
-	return &TxPool{TxChan: make(chan []byte, 10000)}
+	return &TxPool{TxChan: make(chan []byte, 1000)}
 }
 
 type ResultPool struct {
@@ -25,10 +25,9 @@ type ResponseChanOrder struct {
 }
 
 type ResponsePool struct {
-	ResponseChan  chan types.ResponseCheckTx
 	ResponseOrder chan ResponseChanOrder
 }
 
 func NewResponsePool() *ResponsePool {
-	return &ResponsePool{ResponseChan: make(chan types.ResponseCheckTx, 1000)}
+	return &ResponsePool{ResponseOrder: make(chan ResponseChanOrder, 1000)}
 }
