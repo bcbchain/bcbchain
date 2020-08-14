@@ -88,14 +88,13 @@ func (app *BCChainApplication) CheckTx(tx []byte, connV2 *check2.AppCheck) types
 
 	return app.connCheck.CheckTx(tx, connV2)
 }
-func (app *BCChainApplication) CheckTxV1Concurrency(tx []byte, wg sync.WaitGroup, connV2 *check2.AppCheck, resultChan *types2.ResultPool, index int) {
+func (app *BCChainApplication) CheckTxV1Concurrency(tx []byte, wg *sync.WaitGroup, connV2 *check2.AppCheck, resultChan *types2.ResultPool, index int) {
 	defer wg.Done()
 	result := app.connCheck.CheckTxConcurrency(tx, connV2)
 	result.TxID = index
 	resultChan.ResultChan <- *result
 }
-
-func (app *BCChainApplication) RunCheckTxV1Concurrency(result types.Result, responsePool *types2.ResponsePool, connV2 *check2.AppCheck, wg sync.WaitGroup) {
+func (app *BCChainApplication) RunCheckTxV1Concurrency(result types.Result, responsePool *types2.ResponsePool, connV2 *check2.AppCheck, wg *sync.WaitGroup) {
 
 	defer wg.Done()
 	if result.Errorlog != nil {
@@ -107,6 +106,7 @@ func (app *BCChainApplication) RunCheckTxV1Concurrency(result types.Result, resp
 			Index: result.TxID,
 		}
 		responsePool.ResponseOrder <- responseChanOrder
+		return
 	}
 	response := app.connCheck.RunCheckTxV1Concurrency(result, connV2)
 	responseChanOrder := types2.ResponseChanOrder{
@@ -115,6 +115,7 @@ func (app *BCChainApplication) RunCheckTxV1Concurrency(result types.Result, resp
 	}
 	//responsePool.Response <- response
 	responsePool.ResponseOrder <- responseChanOrder
+	return
 }
 
 func (app *BCChainApplication) DeliverTx(tx []byte, appV2 *deliver2.AppDeliver) types.ResponseDeliverTx {
