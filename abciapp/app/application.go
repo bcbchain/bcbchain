@@ -15,6 +15,7 @@ import (
 	"github.com/bcbchain/bcbchain/version"
 	"github.com/bcbchain/bclib/algorithm"
 	"github.com/bcbchain/bclib/jsoniter"
+	"github.com/bcbchain/bclib/socket"
 	"github.com/bcbchain/bclib/tendermint/abci/types"
 	"github.com/bcbchain/bclib/tendermint/go-crypto"
 	cmn "github.com/bcbchain/bclib/tendermint/tmlibs/common"
@@ -22,7 +23,6 @@ import (
 	types2 "github.com/bcbchain/bclib/types"
 	"github.com/bcbchain/sdk/sdk/std"
 	"strings"
-	"time"
 )
 
 //BCChainApplication object of application
@@ -45,6 +45,8 @@ type BCChainApplication struct {
 	txPool       *types3.TxPool
 	resultPool   *types3.ResultPool
 	responsePool *types3.ResponsePool
+
+	responseChan chan<- *types.Response
 }
 
 //NewBCChainApplication create an application object
@@ -62,7 +64,8 @@ func NewBCChainApplication(config common.Config, logger log.Loggerf) *BCChainApp
 	app.txPool = types3.NewTxPool()
 	app.resultPool = types3.NewResultPool()
 	app.responsePool = types3.NewResponsePool()
-
+	app.logger.Info("成功GetResponse通道")
+	app.responseChan = socket.GetResponse()
 	softforks.Init() //存疑　bcbtest
 
 	app.connQuery.SetLogger(logger)
@@ -85,7 +88,7 @@ func NewBCChainApplication(config common.Config, logger log.Loggerf) *BCChainApp
 		app.appv1 = appv1.NewBCChainApplication(logger)
 	}
 	logger.Info("Init bcchain end")
-
+	_ = NewTxParser(&app)
 	return &app
 }
 
@@ -153,42 +156,18 @@ func (app *BCChainApplication) CheckTx(tx []byte) types.ResponseCheckTx {
 	}
 
 	res.TxHash = cmn.HexBytes(algorithm.CalcCodeHash(string(tx)))
+	app.logger.Info("checkTx 处理完结果为", res)
 	return res
 }
 
 //CheckTx checkTxConcurrency interface
-func (app *BCChainApplication) CheckTxConcurrency(tx []byte, responses chan<- *types.Response) {
-	app.logger.Info("n--------1")
-	txParser := NewTxParser(app)
-
+func (app *BCChainApplication) CheckTxConcurrency(tx []byte) {
 	//将收到的单笔交易发送到交易通道中
 	//当交易通道中的交易达到一定数量后
 	//发送一批交易到TxParser中进行交易的构造
-	app.logger.Info("CheckTxConcurrency--------2")
-	app.txPool.TxChan <- tx
 	app.logger.Info("并发check收到tx", tx)
-	ResponseCheckTxMap := make(map[int]types.ResponseCheckTx, txParser.maxConcurrency)
-	var ticker = time.NewTicker(time.Millisecond * 500)
-	for {
-		select {
-		case responseChanOrder := <-app.responsePool.ResponseOrder:
-			ResponseCheckTxMap[responseChanOrder.Index] = responseChanOrder.Response
-			if len(ResponseCheckTxMap) == txParser.maxConcurrency {
-				app.logger.Info("CheckTxConcurrency--------4")
-				for i := 0; i < txParser.maxConcurrency; i++ {
-					responses <- types.ToResponseCheckTx(ResponseCheckTxMap[i])
-					app.logger.Info("并发check", ResponseCheckTxMap[i])
-				}
-			}
+	app.txPool.TxChan <- tx
 
-		case <-ticker.C:
-			for i := 0; i < txParser.maxConcurrency; i++ {
-				app.logger.Info("CheckTxConcurrency--------5")
-				responses <- types.ToResponseCheckTx(ResponseCheckTxMap[i])
-				app.logger.Info("并发check", ResponseCheckTxMap[i])
-			}
-		}
-	}
 }
 
 func (app *BCChainApplication) CheckTxs(txs [][]byte) types.ResponseCheckTxs {
@@ -212,6 +191,7 @@ func (app *BCChainApplication) DeliverTx(tx []byte) types.ResponseDeliverTx {
 	app.logger.Info("start DeliverTx")
 	var res types.ResponseDeliverTx
 
+	app.logger.Info("deliver 收到 tx", tx)
 	splitTx := strings.Split(string(tx), ".")
 	app.logger.Info("DeliverTx", "splitTx", splitTx)
 	if len(splitTx) == 5 {
@@ -236,6 +216,7 @@ func (app *BCChainApplication) DeliverTx(tx []byte) types.ResponseDeliverTx {
 	}
 
 	res.TxHash = algorithm.CalcCodeHash(string(tx))
+	app.logger.Info("deliver tx 结果 res", res)
 	return res
 }
 
