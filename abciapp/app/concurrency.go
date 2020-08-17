@@ -175,7 +175,7 @@ func (T *TxExecutor) PutResponse() {
 				if _, ok := ResponseCheckTxMap[i]; ok {
 					T.app.logger.Info("发送的response是", ResponseCheckTxMap[i])
 					T.app.responseChan <- types.ToResponseCheckTx(ResponseCheckTxMap[i])
-					//T.app.responseChan <- types.ToResponseFlush()
+					T.app.responseChan <- types.ToResponseFlush()
 					delete(ResponseCheckTxMap, i)
 					i++
 					if i == T.lenResponse {
