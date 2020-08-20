@@ -65,6 +65,7 @@ func (tx *Tx) BatchSet(data map[string][]byte) {
 		tx.wBits.Set([]byte(key))
 	}
 }
+
 func (tx *Tx) begin() {
 	tx.doneEvent.Add(1)
 }
