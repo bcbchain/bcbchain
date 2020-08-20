@@ -165,32 +165,6 @@ func (app *BCChainApplication) CheckTx(tx []byte) types.ResponseCheckTx {
 	return res
 }
 
-//CheckTx checkTxConcurrency interface
-func (app *BCChainApplication) CheckTxConcurrency(tx []byte) {
-	//将收到的单笔交易发送到交易通道中
-	//当交易通道中的交易达到一定数量后
-	//发送一批交易到TxParser中进行交易的构造
-	//app.logger.Info("并发check收到tx", tx)
-	//app.txPool.ResultChan <- tx
-
-}
-
-func (app *BCChainApplication) CheckTxs(txs [][]byte) types.ResponseCheckTxs {
-
-	// TODO　启动一个协程发送tx
-	// go txRoutine()
-	responseCheckTxs := []types.ResponseCheckTx{}
-	for i, tx := range txs {
-		app.logger.Info("CheckTxs成功收到", "交易", i)
-		app.logger.Info("交易为", "tx", string(tx))
-		responseCheckTx := app.CheckTx(tx)
-		app.logger.Info("交易检查后", "responseCheckTx", responseCheckTx)
-		responseCheckTxs = append(responseCheckTxs, responseCheckTx)
-	}
-
-	return types.ResponseCheckTxs{responseCheckTxs}
-}
-
 //DeliverTx deliverTx interface
 func (app *BCChainApplication) DeliverTx(tx []byte) types.ResponseDeliverTx {
 	app.logger.Info("start DeliverTx")
@@ -225,15 +199,6 @@ func (app *BCChainApplication) DeliverTx(tx []byte) types.ResponseDeliverTx {
 	return res
 }
 
-//func (app *BCChainApplication) DeliverTxConcurrency(tx []byte, reqRes *abcicli.ReqRes) {
-//	app.logger.Info("start DeliverTx")
-//
-//	app.logger.Info("deliver 收到 tx", tx)
-//
-//	app.txPool.PutRawTx(tx, reqRes)
-//
-//}
-
 func (app *BCChainApplication) DeliverTxConcurrency(tx []byte, v interface{}) {
 	app.logger.Info("start DeliverTx")
 
@@ -243,21 +208,6 @@ func (app *BCChainApplication) DeliverTxConcurrency(tx []byte, v interface{}) {
 	app.logger.Info("deliver 收到请求 reqRes", reqRes.Request)
 	app.txPool.PutRawTx(tx, &reqRes)
 
-}
-
-//DeliverTx deliverTx interface
-func (app *BCChainApplication) DeliverTxs(txs [][]byte) types.ResponseDeliverTxs {
-	responseDeliverTxs := []types.ResponseDeliverTx{}
-
-	for i, tx := range txs {
-		app.logger.Info("DeliverTxs成功收到", "交易", i)
-		app.logger.Info("交易为", "tx", string(tx))
-		responseDeliverTx := app.DeliverTx(tx)
-		app.logger.Info("交易DeliverTx后", "tx", responseDeliverTx)
-		responseDeliverTxs = append(responseDeliverTxs, responseDeliverTx)
-	}
-
-	return types.ResponseDeliverTxs{responseDeliverTxs}
 }
 
 //Flush flush interface
@@ -328,35 +278,6 @@ func (app *BCChainApplication) BeginBlock(req types.RequestBeginBlock) types.Res
 		panic("invalid chain version in state")
 	}
 
-	return res
-}
-
-//BeginBlock beginblock interface
-func (app *BCChainApplication) BeginBlockConcurrency(req types.RequestBeginBlock, response chan<- *types.Response) types.ResponseBeginBlock {
-
-	//从BeginBlock中拿到区块头等信息
-	//在后续的数据库层提供给tx的参数
-	app.responseChan = response
-
-	var res types.ResponseBeginBlock
-
-	if app.ChainVersion() == 0 {
-		res = app.appv1.BeginBlock(req)
-	} else if app.ChainVersion() == 2 {
-		// if chain was upgrade from v1, then invoke appv1 BeginBlockToV2 before v2 BeginBlock
-		if checkGenesisChainVersion() == 0 {
-			app.appv1.BeginBlockToV2(req)
-		}
-
-		res, _ = app.connDeliver.BeginBlock(req)
-
-	} else {
-		panic("invalid chain version in state")
-	}
-
-	app.txPool.SetBeginBlockInfo(req)
-	app.txPool.SetResponseChan(response)
-	//app.txPool.SetAppDeliverInfo(*app.connDeliver)
 	return res
 }
 
@@ -519,7 +440,7 @@ func (app *BCChainApplication) Controller() {
 				switch result.TxVersion {
 				case "v1": //还是走之前的版本
 				case "v2":
-					tx := statedbhelper.NewTx(app.connDeliver.TransID(),
+					tx := statedbhelper.NewTxCurrency(app.connDeliver.TransID(),
 						result.TxID,
 						InvokeTx,
 						app.txPool.BeginBlockInfo.Header,
@@ -537,7 +458,7 @@ func (app *BCChainApplication) Controller() {
 					app.logger.Info("Controller 解析到的 v2 tx", tx)
 					txs = append(txs, tx)
 				case "v3":
-					tx := statedbhelper.NewTx(app.connDeliver.TransID(),
+					tx := statedbhelper.NewTxCurrency(app.connDeliver.TransID(),
 						result.TxID,
 						InvokeTx,
 						app.txPool.BeginBlockInfo.Header,

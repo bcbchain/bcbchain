@@ -1,10 +1,8 @@
 package app
 
 import (
-	"fmt"
 	check2 "github.com/bcbchain/bcbchain/abciapp/service/check"
 	deliver2 "github.com/bcbchain/bcbchain/abciapp/service/deliver"
-	types2 "github.com/bcbchain/bcbchain/abciapp/service/types"
 	"github.com/bcbchain/bcbchain/abciapp_v1.0/bcerrors"
 	"github.com/bcbchain/bcbchain/abciapp_v1.0/service/check"
 	"github.com/bcbchain/bcbchain/abciapp_v1.0/service/deliver"
@@ -14,8 +12,6 @@ import (
 	"github.com/bcbchain/bcbchain/version"
 	"github.com/bcbchain/bclib/tendermint/abci/types"
 	"github.com/bcbchain/bclib/tendermint/tmlibs/log"
-	types3 "github.com/bcbchain/bclib/types"
-	"sync"
 )
 
 type BCChainApplication struct {
@@ -88,35 +84,36 @@ func (app *BCChainApplication) CheckTx(tx []byte, connV2 *check2.AppCheck) types
 
 	return app.connCheck.CheckTx(tx, connV2)
 }
-func (app *BCChainApplication) CheckTxV1Concurrency(tx []byte, wg *sync.WaitGroup, connV2 *check2.AppCheck, resultChan *types2.ResultPool, index int) {
-	defer wg.Done()
-	result := app.connCheck.CheckTxConcurrency(tx, connV2)
-	result.TxID = index
-	resultChan.ResultChan <- *result
-}
-func (app *BCChainApplication) RunCheckTxV1Concurrency(result types.Result, responsePool *types2.ResponsePool, connV2 *check2.AppCheck, wg *sync.WaitGroup) {
 
-	defer wg.Done()
-	if result.Errorlog != nil {
-		responseChanOrder := types2.ResponseChanOrder{
-			Response: types.ResponseCheckTx{
-				Code: types3.ErrCheckTx,
-				Log:  fmt.Sprint(result.Errorlog),
-			},
-			Index: result.TxID,
-		}
-		responsePool.ResponseOrder <- responseChanOrder
-		return
-	}
-	response := app.connCheck.RunCheckTxV1Concurrency(result, connV2)
-	responseChanOrder := types2.ResponseChanOrder{
-		Response: response,
-		Index:    result.TxID,
-	}
-	//responsePool.Response <- response
-	responsePool.ResponseOrder <- responseChanOrder
-	return
-}
+//func (app *BCChainApplication) CheckTxV1Concurrency(tx []byte, wg *sync.WaitGroup, connV2 *check2.AppCheck, resultChan *types2.ResultPool, index int) {
+//	defer wg.Done()
+//	result := app.connCheck.CheckTxConcurrency(tx, connV2)
+//	result.TxID = index
+//	resultChan.ResultChan <- *result
+//}
+//func (app *BCChainApplication) RunCheckTxV1Concurrency(result types.Result, responsePool *types2.ResponsePool, connV2 *check2.AppCheck, wg *sync.WaitGroup) {
+//
+//	defer wg.Done()
+//	if result.Errorlog != nil {
+//		responseChanOrder := types2.ResponseChanOrder{
+//			Response: types.ResponseCheckTx{
+//				Code: types3.ErrCheckTx,
+//				Log:  fmt.Sprint(result.Errorlog),
+//			},
+//			Index: result.TxID,
+//		}
+//		responsePool.ResponseOrder <- responseChanOrder
+//		return
+//	}
+//	response := app.connCheck.RunCheckTxV1Concurrency(result, connV2)
+//	responseChanOrder := types2.ResponseChanOrder{
+//		Response: response,
+//		Index:    result.TxID,
+//	}
+//	//responsePool.Response <- response
+//	responsePool.ResponseOrder <- responseChanOrder
+//	return
+//}
 
 func (app *BCChainApplication) DeliverTx(tx []byte, appV2 *deliver2.AppDeliver) types.ResponseDeliverTx {
 
