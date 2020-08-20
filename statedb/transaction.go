@@ -39,6 +39,20 @@ func (trans *Transaction) NewTx(f TxFunction, params ...interface{}) (tx *Tx) {
 	return
 }
 
+func (trans *Transaction) NewTxCurrency(txID int64, f TxFunction, params ...interface{}) (tx *Tx) {
+	tx = &Tx{
+		txID:        txID,
+		wBuffer:     make(map[string][]byte),
+		rBuffer:     make(map[string][]byte),
+		wBits:       newConflictBits(trans.maxTxCount * 256),
+		rBits:       newConflictBits(trans.maxTxCount * 256),
+		txFunc:      f,
+		txParams:    params,
+		transaction: trans,
+	}
+	return
+}
+
 func (trans *Transaction) calcTxID() int64 {
 	return atomic.AddInt64(&trans.lastTxID, 1)
 }
