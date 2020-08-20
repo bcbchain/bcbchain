@@ -76,7 +76,7 @@ func GetFromDB(key string) ([]byte, error) {
 	return stateDB.Get(key), nil
 }
 
-func NewTx(transID int64) int64 {
+func NewTxID(transID int64) int64 {
 	temp, ok := transactionMap.Load(transID)
 	if !ok {
 		panic("invalid transID")
@@ -86,6 +86,17 @@ func NewTx(transID int64) int64 {
 	tx := trans.Transaction.NewTx(nil)
 	trans.TxMap[tx.ID()] = tx
 	return tx.ID()
+}
+
+func NewTx(transID int64, txID int64, f statedb.TxFunction, params ...interface{}) (tx *statedb.Tx) {
+	temp, ok := transactionMap.Load(transID)
+	if !ok {
+		panic("invalid transID")
+	}
+	trans := temp.(*Trans)
+
+	tx = trans.Transaction.NewTxCurrency(txID, f, params)
+	return tx
 }
 
 func Get(transID, txID int64, key string) ([]byte, error) {
@@ -368,7 +379,7 @@ func BeginBlock(transID int64) {
 	state := GetWorldAppState(transID, 0)
 
 	state.BlockHeight = state.BlockHeight + 1
-	SetWorldAppState(transID, NewTx(transID), state)
+	SetWorldAppState(transID, NewTxID(transID), state)
 }
 
 //RollbackBlock rollback block changes
@@ -904,4 +915,13 @@ func batchSet(transID, txID int64, data map[string][]byte) {
 		panic(fmt.Sprintf("invalid txID: %d", txID))
 	}
 	tx.BatchSet(data)
+}
+
+func GoBatchExec(transID int64, txs []*statedb.Tx) {
+	temp, ok := transactionMap.Load(transID)
+	if !ok {
+		panic("invalid transID")
+	}
+	trans := temp.(*Trans)
+	trans.Transaction.GoBatchExec(txs)
 }
