@@ -39,7 +39,7 @@ func (app *AppCheck) CheckBCTx(tx []byte) types.ResponseCheckTx {
 }
 
 // CheckBCTx check tx data
-func (app *AppCheck) CheckBCTxV2Concurrency(tx []byte, wg sync.WaitGroup) *types.Result {
+func (app *AppCheck) CheckBCTxV2Concurrency(tx []byte, wg *sync.WaitGroup) *types.Result {
 
 	result := &types.Result{
 		TxVersion: "tx2",
@@ -61,7 +61,7 @@ func (app *AppCheck) CheckBCTxV2Concurrency(tx []byte, wg sync.WaitGroup) *types
 }
 
 // CheckBCTx check tx data
-func (app *AppCheck) CheckBCTxV3Concurrency(tx []byte, wg sync.WaitGroup) *types.Result {
+func (app *AppCheck) CheckBCTxV3Concurrency(tx []byte, wg *sync.WaitGroup) *types.Result {
 
 	result := &types.Result{
 		TxVersion: "tx3",
@@ -117,7 +117,6 @@ func (app *AppCheck) runCheckBCTxV2Concurrency(result types.Result) types.Respon
 		blockHeader.Height = blockHeader.Height + 1
 	}
 	app.logger.Debug("CheckTx", "block height", blockHeader.Height)
-
 	txHash := common.HexBytes(algorithm.CalcCodeHash(string(result.Tx)))
 	response := adp.InvokeTx(blockHeader, transID, txID, result.TxV2Result.Pubkey.Address(statedbhelper.GetChainID()), result.TxV2Result.Transaction, result.TxV2Result.Pubkey.Bytes(), txHash, appStat.BeginBlock.Hash)
 	if response.Code == types2.CodeBVMQueryOK {
