@@ -1,8 +1,9 @@
 package deliver
 
 import (
-	"github.com/bcbchain/bcbchain/abciapp/service/deliver"
 	"container/list"
+	"github.com/bcbchain/bcbchain/abciapp/service/deliver"
+	types2 "github.com/bcbchain/bcbchain/abciapp/service/types"
 	"strconv"
 	"strings"
 	"time"
@@ -197,6 +198,10 @@ func (conn *DeliverConnection) BeginBlockToV2(req abci.RequestBeginBlock) {
 
 func (conn *DeliverConnection) DeliverTx(tx []byte, connV2 *deliver.AppDeliver) abci.ResponseDeliverTx {
 	return conn.deliverBCTx(tx, connV2)
+}
+
+func (conn *DeliverConnection) DeliverTxCurrency(tx []byte, connV2 *deliver.AppDeliver) types2.Result2 {
+	return conn.deliverBCTxCurrency(tx, connV2)
 }
 
 func (conn *DeliverConnection) Flush(req abci.RequestFlush) abci.ResponseFlush {

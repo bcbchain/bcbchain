@@ -1,18 +1,18 @@
 package upgrade1to2
 
 import (
+	"encoding/hex"
+	"errors"
 	"github.com/bcbchain/bcbchain/abciapp_v1.0/bcerrors"
 	"github.com/bcbchain/bcbchain/abciapp_v1.0/smc"
-	"github.com/bcbchain/bclib/algorithm"
 	"github.com/bcbchain/bcbchain/common/statedbhelper"
 	"github.com/bcbchain/bcbchain/smcbuilder"
+	"github.com/bcbchain/bclib/algorithm"
+	"github.com/bcbchain/bclib/dockerlib"
+	"github.com/bcbchain/bclib/tendermint/tmlibs/log"
 	"github.com/bcbchain/sdk/sdk/jsoniter"
 	"github.com/bcbchain/sdk/sdk/std"
 	smcsdk "github.com/bcbchain/sdk/sdk/types"
-	"github.com/bcbchain/bclib/dockerlib"
-	"encoding/hex"
-	"errors"
-	"github.com/bcbchain/bclib/tendermint/tmlibs/log"
 	"os"
 	"path/filepath"
 	"runtime"

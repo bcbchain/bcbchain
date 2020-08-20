@@ -7,6 +7,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	types3 "github.com/bcbchain/bcbchain/abciapp/service/types"
+	"github.com/bcbchain/bclib/tx/v1"
 	"math/big"
 	"strconv"
 	"strings"
@@ -52,6 +54,30 @@ func (conn *DeliverConnection) deliverBCTx(tx []byte, connV2 *deliver.AppDeliver
 	}
 
 	return conn.runDeliverBCTx(tx, bFailed, fromAddr, transaction, connV2)
+}
+
+func (conn *DeliverConnection) deliverBCTxCurrency(tx []byte, connV2 *deliver.AppDeliver) types3.Result2 {
+
+	conn.logger.Info("Recv ABCI interface: DeliverTxCurrency", "tx", string(tx))
+
+	var result types3.Result2
+	fromAddr, pubKey, transaction, bFailed, bcError := conn.parseTx(tx)
+
+	if bcError.ErrorCode != bcerrors.ErrCodeOK {
+		result.ErrorLog = errors.New(bcError.Error())
+	}
+	result.Tx = tx
+	result.TxV1Result.FromAddr = fromAddr
+	result.TxV1Result.Transaction = tx1.Transaction(transaction)
+	result.TxV1Result.BFailed = bFailed
+
+	if connV2 != nil {
+		//return conn.runDeliverBCTxEx(tx, bFailed, fromAddr, pubKey, transaction, connV2)
+		result.TxV1Result.Pubkey = pubKey
+	}
+
+	return result
+	//return conn.runDeliverBCTx(tx, bFailed, fromAddr, transaction, connV2)
 }
 
 func (conn *DeliverConnection) runDeliverBCTx(tx []byte, bFailed bool, fromAddr smc.Address, transaction bctx.Transaction, connV2 *deliver.AppDeliver) (resDeliverTx types.ResponseDeliverTx) {
