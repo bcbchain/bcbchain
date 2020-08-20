@@ -13,10 +13,11 @@ import (
 	"github.com/bcbchain/bcbchain/version"
 	"github.com/bcbchain/bclib/algorithm"
 	"github.com/bcbchain/bclib/jsoniter"
+	"github.com/bcbchain/bclib/tendermint/go-crypto"
 	types2 "github.com/bcbchain/bclib/types"
 	"github.com/bcbchain/sdk/sdk/std"
-	"github.com/bcbchain/bclib/tendermint/go-crypto"
 	"strings"
+	"sync"
 
 	appv1 "github.com/bcbchain/bcbchain/abciapp_v1.0/app"
 	"github.com/bcbchain/bclib/tendermint/abci/types"
@@ -40,6 +41,8 @@ type BCChainApplication struct {
 	chainVersion *int64
 	// update current chain version
 	updateChainVersion int64
+
+	waitGroup sync.WaitGroup
 }
 
 //NewBCChainApplication create an application object
@@ -65,11 +68,11 @@ func NewBCChainApplication(config common.Config, logger log.Loggerf) *BCChainApp
 	app.connDeliver.SetChainID(chainID)
 	crypto.SetChainId(chainID)
 
-	if checkGenesisChainVersion() == 0 {
-		adapterIns := adapter.GetInstance()
-		adapterIns.Init(logger, 32333)
-		adapter.SetSdbCallback(statedbhelper.AdapterGetCallBack, statedbhelper.AdapterSetCallBack, builderhelper.AdapterBuildCallBack)
+	adapterIns := adapter.GetInstance()
+	adapterIns.Init(logger, 32333)
+	adapter.SetSdbCallback(statedbhelper.AdapterGetCallBack, statedbhelper.AdapterSetCallBack, builderhelper.AdapterBuildCallBack)
 
+	if checkGenesisChainVersion() == 0 {
 		app.appv1 = appv1.NewBCChainApplication(logger)
 	}
 	logger.Info("Init bcchain end")
@@ -145,6 +148,9 @@ func (app *BCChainApplication) CheckTx(tx []byte) types.ResponseCheckTx {
 
 //DeliverTx deliverTx interface
 func (app *BCChainApplication) DeliverTx(tx []byte) types.ResponseDeliverTx {
+
+	app.waitGroup.Add(1)
+	defer app.waitGroup.Done()
 
 	var res types.ResponseDeliverTx
 
@@ -247,6 +253,8 @@ func (app *BCChainApplication) BeginBlock(req types.RequestBeginBlock) types.Res
 
 //EndBlock endblock interface
 func (app *BCChainApplication) EndBlock(req types.RequestEndBlock) types.ResponseEndBlock {
+
+	app.waitGroup.Wait()
 
 	var res types.ResponseEndBlock
 
