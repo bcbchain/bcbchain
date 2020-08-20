@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 	"github.com/bcbchain/bcbchain/abciapp/common"
 	"github.com/bcbchain/bcbchain/abciapp/service/check"
@@ -12,10 +13,11 @@ import (
 	"github.com/bcbchain/bcbchain/common/builderhelper"
 	"github.com/bcbchain/bcbchain/common/statedbhelper"
 	"github.com/bcbchain/bcbchain/smcrunctl/adapter"
+	"github.com/bcbchain/bcbchain/statedb"
 	"github.com/bcbchain/bcbchain/version"
 	"github.com/bcbchain/bclib/algorithm"
 	"github.com/bcbchain/bclib/jsoniter"
-	"github.com/bcbchain/bclib/socket"
+	abcicli "github.com/bcbchain/bclib/tendermint/abci/client"
 	"github.com/bcbchain/bclib/tendermint/abci/types"
 	"github.com/bcbchain/bclib/tendermint/go-crypto"
 	cmn "github.com/bcbchain/bclib/tendermint/tmlibs/common"
@@ -23,6 +25,7 @@ import (
 	types2 "github.com/bcbchain/bclib/types"
 	"github.com/bcbchain/sdk/sdk/std"
 	"strings"
+	"sync"
 )
 
 //BCChainApplication object of application
@@ -42,9 +45,9 @@ type BCChainApplication struct {
 	// update current chain version
 	updateChainVersion int64
 
-	txPool       *types3.TxPool
-	resultPool   *types3.ResultPool
-	responsePool *types3.ResponsePool
+	txPool *TxPool
+	//resultPool   *types3.ResultPool
+	//responsePool *types3.ResponsePool
 
 	responseChan chan<- *types.Response
 }
@@ -61,11 +64,10 @@ func NewBCChainApplication(config common.Config, logger log.Loggerf) *BCChainApp
 		logger:      logger,
 	}
 
-	app.txPool = types3.NewTxPool()
-	app.resultPool = types3.NewResultPool()
-	app.responsePool = types3.NewResponsePool()
-	app.logger.Info("成功GetResponse通道")
-	app.responseChan = socket.GetResponse()
+	app.txPool = NewTxPool(app.logger)
+	//app.resultPool = types3.NewResultPool()
+	//app.responsePool = types3.NewResponsePool()
+
 	softforks.Init() //存疑　bcbtest
 
 	app.connQuery.SetLogger(logger)
@@ -88,7 +90,10 @@ func NewBCChainApplication(config common.Config, logger log.Loggerf) *BCChainApp
 		app.appv1 = appv1.NewBCChainApplication(logger)
 	}
 	logger.Info("Init bcchain end")
-	_ = NewTxParser(&app)
+
+	go app.Parser()
+	go app.Controller()
+	go app.PutResponse()
 	return &app
 }
 
@@ -165,8 +170,8 @@ func (app *BCChainApplication) CheckTxConcurrency(tx []byte) {
 	//将收到的单笔交易发送到交易通道中
 	//当交易通道中的交易达到一定数量后
 	//发送一批交易到TxParser中进行交易的构造
-	app.logger.Info("并发check收到tx", tx)
-	app.txPool.TxChan <- tx
+	//app.logger.Info("并发check收到tx", tx)
+	//app.txPool.ResultChan <- tx
 
 }
 
@@ -218,6 +223,26 @@ func (app *BCChainApplication) DeliverTx(tx []byte) types.ResponseDeliverTx {
 	res.TxHash = algorithm.CalcCodeHash(string(tx))
 	app.logger.Info("deliver tx 结果 res", res)
 	return res
+}
+
+//func (app *BCChainApplication) DeliverTxConcurrency(tx []byte, reqRes *abcicli.ReqRes) {
+//	app.logger.Info("start DeliverTx")
+//
+//	app.logger.Info("deliver 收到 tx", tx)
+//
+//	app.txPool.PutRawTx(tx, reqRes)
+//
+//}
+
+func (app *BCChainApplication) DeliverTxConcurrency(tx []byte, v interface{}) {
+	app.logger.Info("start DeliverTx")
+
+	app.logger.Info("deliver 收到 tx", tx)
+
+	reqRes := v.(abcicli.ReqRes)
+	app.logger.Info("deliver 收到请求 reqRes", reqRes.Request)
+	app.txPool.PutRawTx(tx, &reqRes)
+
 }
 
 //DeliverTx deliverTx interface
@@ -306,9 +331,39 @@ func (app *BCChainApplication) BeginBlock(req types.RequestBeginBlock) types.Res
 	return res
 }
 
+//BeginBlock beginblock interface
+func (app *BCChainApplication) BeginBlockConcurrency(req types.RequestBeginBlock, response chan<- *types.Response) types.ResponseBeginBlock {
+
+	//从BeginBlock中拿到区块头等信息
+	//在后续的数据库层提供给tx的参数
+	app.responseChan = response
+
+	var res types.ResponseBeginBlock
+
+	if app.ChainVersion() == 0 {
+		res = app.appv1.BeginBlock(req)
+	} else if app.ChainVersion() == 2 {
+		// if chain was upgrade from v1, then invoke appv1 BeginBlockToV2 before v2 BeginBlock
+		if checkGenesisChainVersion() == 0 {
+			app.appv1.BeginBlockToV2(req)
+		}
+
+		res, _ = app.connDeliver.BeginBlock(req)
+
+	} else {
+		panic("invalid chain version in state")
+	}
+
+	app.txPool.SetBeginBlockInfo(req)
+	app.txPool.SetResponseChan(response)
+	//app.txPool.SetAppDeliverInfo(*app.connDeliver)
+	return res
+}
+
 //EndBlock endblock interface
 func (app *BCChainApplication) EndBlock(req types.RequestEndBlock) types.ResponseEndBlock {
 
+	app.txPool.ResetTxPool(app.logger) //重置交易池
 	var res types.ResponseEndBlock
 
 	if app.ChainVersion() == 0 {
@@ -405,4 +460,167 @@ func (app *BCChainApplication) ChainVersion() int64 {
 	}
 
 	return *app.chainVersion
+}
+
+//parser 得到交易后，根据不同的版本交易，执行构造函数
+func (app *BCChainApplication) Parser() {
+	app.logger.Info("start Parser")
+	var wg *sync.WaitGroup
+	for {
+		if rawTxsOrders, ok := app.txPool.GetRawTxs(); ok {
+			app.logger.Info("Parser 收到交易", rawTxsOrders)
+			wg.Add(len(rawTxsOrders))
+			for i, txOrder := range rawTxsOrders {
+				result := &types3.Result2{}
+				splitTx := strings.Split(string(txOrder.RawTx), ".")
+				if len(splitTx) == 5 {
+					if splitTx[1] == "v1" && app.appv1 != nil {
+						// if chain version never upgrade, give appv2 nil.
+						var connV2 *deliver.AppDeliver
+						if app.ChainVersion() == 2 {
+							connV2 = app.connDeliver
+						}
+						res := app.appv1.DeliverTx(txOrder.RawTx, connV2)
+						txOrder.ReqRes.Response = types.ToResponseDeliverTx(res)
+						wg.Done()
+						//go app.txPool.PutResults(app.appv1.DeliverTxV1Concurrency(txOrder, connV2, wg))
+					} else if (splitTx[1] == "v2" || splitTx[1] == "v3") && app.ChainVersion() == 2 {
+						go app.txPool.PutResults(app.connDeliver.DeliverTxCurrency(txOrder, wg))
+					} else {
+						result.ErrorLog = errors.New("invalid transaction")
+						result.TxID = int64(i)
+						result.ReqRes = txOrder.ReqRes
+						go app.txPool.PutResults(*result)
+						wg.Done()
+					}
+				} else {
+					result.ErrorLog = errors.New("invalid transaction")
+					result.TxID = int64(i)
+					result.ReqRes = txOrder.ReqRes
+					go app.txPool.PutResults(*result)
+					wg.Done()
+				}
+			}
+			wg.Wait()
+		}
+	}
+}
+
+func (app *BCChainApplication) Controller() {
+	app.logger.Info("start Controller")
+	for {
+		if results, ok := app.txPool.GetResults(); ok {
+			app.logger.Info("Controller 收到一批results", results)
+			//result中存储的是do_tx所需要的参数
+			//do_tx需要根据result的不同选择不同的invoke
+			txs := make([]*statedb.Tx, 0)
+			for _, result := range results {
+				app.logger.Info("Controller 解析到的 result", result)
+				switch result.TxVersion {
+				case "v1": //还是走之前的版本
+				case "v2":
+					tx := statedbhelper.NewTx(app.connDeliver.TransID(),
+						result.TxID,
+						InvokeTx,
+						app.txPool.BeginBlockInfo.Header,
+						app.connDeliver.TransID(),
+						result.TxID,
+						result.TxV2Result.Pubkey.Address(statedbhelper.GetChainID()),
+						result.TxV2Result.Transaction,
+						result.TxV2Result.Pubkey.Bytes(),
+						cmn.HexBytes(algorithm.CalcCodeHash(string(result.Tx))),
+						app.txPool.BeginBlockInfo.Hash,
+						app.txPool.ResponseOrder,
+						result.TxOrder,
+						app.logger,
+						result.Tx)
+					app.logger.Info("Controller 解析到的 v2 tx", tx)
+					txs = append(txs, tx)
+				case "v3":
+					tx := statedbhelper.NewTx(app.connDeliver.TransID(),
+						result.TxID,
+						InvokeTx,
+						app.txPool.BeginBlockInfo.Header,
+						app.connDeliver.TransID(),
+						result.TxID,
+						result.TxV3Result.Pubkey.Address(statedbhelper.GetChainID()),
+						result.TxV3Result.Transaction,
+						result.TxV3Result.Pubkey.Bytes(),
+						cmn.HexBytes(algorithm.CalcCodeHash(string(result.Tx))),
+						app.txPool.BeginBlockInfo.Hash,
+						app.txPool.ResponseOrder,
+						result.TxOrder,
+						app.logger,
+						result.Tx)
+					app.logger.Info("Controller 解析到的 v3 tx", tx)
+					txs = append(txs, tx)
+				}
+			}
+			app.logger.Info("Controller 解析到的 txs", txs)
+			statedbhelper.GoBatchExec(app.connDeliver.TransID(), txs)
+		}
+	}
+}
+
+//large vivid receive ill plastic protect maid alone allow buyer elegant liar
+func (app *BCChainApplication) PutResponse() {
+	app.logger.Info("start PutResponse")
+	for {
+		if responsesOrders, ok := app.txPool.GetResponsesOrder(); ok {
+			app.logger.Info("PutResponse 收到 responsesOrders", responsesOrders)
+			for _, responseOrder := range responsesOrders {
+				var resDeliverTx types.ResponseDeliverTx
+				adp := adapter.GetInstance()
+				if responseOrder.Response.Code != types2.CodeOK {
+					app.logger.Error("docker invoke error.....", "error", responseOrder.Response.Log)
+					app.logger.Debug("docker invoke error.....", "response", responseOrder.Response.String())
+					statedbhelper.RollbackTx(app.connDeliver.TransID(), responseOrder.TxID)
+					adp.RollbackTx(app.connDeliver.TransID(), responseOrder.TxID)
+					resDeliverTx, _, totalFee := app.connDeliver.ReportInvokeFailure(responseOrder.Tx, responseOrder.Transaction, responseOrder.Response)
+					resDeliverTx.Fee = uint64(totalFee)
+					app.logger.Info("交易处理失败", resDeliverTx)
+					responseOrder.ReqRes.Response = types.ToResponseDeliverTx(resDeliverTx)
+					//return resDeliverTx
+				}
+				app.logger.Debug("docker invoke response.....", "code", responseOrder.Response.Code)
+
+				// pack validators if update validator info
+				if deliver.HasUpdateValidatorReceipt(responseOrder.Response.Tags) {
+					app.connDeliver.PackValidators()
+				}
+
+				// pack side chain genesis info
+				if t, ok := deliver.HasSideChainGenesisReceipt(responseOrder.Response.Tags); ok {
+					app.connDeliver.PackSideChainGenesis(t)
+				}
+
+				//emit new summary fee  and transferFee receipts
+				tags, totalFee := app.connDeliver.EmitFeeReceipts(responseOrder.Transaction, responseOrder.Response, true)
+
+				resDeliverTx.Code = responseOrder.Response.Code
+				resDeliverTx.Log = responseOrder.Response.Log
+				resDeliverTx.Tags = tags
+				resDeliverTx.GasLimit = uint64(responseOrder.Transaction.GasLimit)
+				resDeliverTx.GasUsed = uint64(responseOrder.Response.GasUsed)
+				resDeliverTx.Fee = uint64(totalFee)
+				resDeliverTx.Data = responseOrder.Response.Data
+				resDeliverTxStr := resDeliverTx.String()
+				app.logger.Debug("deliverBCTx()", "resDeliverTx length", len(resDeliverTxStr), "resDeliverTx", resDeliverTxStr) // log value of async instance must be immutable to avoid data race
+
+				stateTx, _ := statedbhelper.CommitTx(app.connDeliver.TransID(), responseOrder.TxID)
+				app.connDeliver.CalcDeliverHash(responseOrder.Tx, &resDeliverTx, stateTx)
+				app.logger.Debug("deliverBCTx() ", "stateTx length", len(stateTx), "stateTx ", string(stateTx))
+
+				//calculate Fee
+				//app.connCheck.fee = app.fee + response.Fee
+				app.connDeliver.SetFee(responseOrder.Response.Fee)
+				//app.logger.Debug("deliverBCTx()", "app.fee", app.fee, "app.rewards", map2String(app.rewards))
+				app.responseChan <- types.ToResponseDeliverTx(resDeliverTx)
+				app.logger.Debug("end deliver invoke.....")
+				app.logger.Info("交易处理成功", resDeliverTx)
+				responseOrder.ReqRes.Response = types.ToResponseDeliverTx(resDeliverTx)
+				//return resDeliverTx, combineBuffer(nonceBuffer, txBuffer)
+			}
+		}
+	}
 }
