@@ -2,12 +2,14 @@ package deliver
 
 import (
 	"container/list"
+	types2 "github.com/bcbchain/bcbchain/abciapp/service/types"
 	"github.com/bcbchain/bcbchain/common/statedbhelper"
 	abci "github.com/bcbchain/bclib/tendermint/abci/types"
 	"github.com/bcbchain/bclib/tendermint/go-crypto"
 	"github.com/bcbchain/bclib/tendermint/tmlibs/log"
 	"github.com/bcbchain/bclib/types"
 	"strconv"
+	"sync"
 )
 
 //AppDeliver object of delivertx
@@ -30,6 +32,10 @@ type AppDeliver struct {
 	scGenesis      []*abci.SideChainGenesis // 侧链创世信息
 
 	rp *ReceiptParser //
+}
+
+func (app *AppDeliver) SetFee(fee int64) {
+	app.fee = app.fee + fee
 }
 
 //SetLogger set logger
@@ -55,6 +61,14 @@ func (app *AppDeliver) BeginBlock(req abci.RequestBeginBlock) (abci.ResponseBegi
 //DeliverTx DeliverTx interface of app
 func (app *AppDeliver) DeliverTx(tx []byte) (abci.ResponseDeliverTx, map[string][]byte) {
 	return app.deliverBCTx(tx)
+}
+
+func (app *AppDeliver) DeliverTxCurrency(tx types2.TxOrder, wg *sync.WaitGroup) types2.Result2 {
+	defer wg.Done()
+	result := app.deliverBCTxCurrency(tx.RawTx)
+	result.TxOrder = tx.Index
+	result.ReqRes = tx.ReqRes
+	return result
 }
 
 func (app *AppDeliver) CleanData() error {
