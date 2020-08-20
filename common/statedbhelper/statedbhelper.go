@@ -76,7 +76,7 @@ func GetFromDB(key string) ([]byte, error) {
 	return stateDB.Get(key), nil
 }
 
-func NewTxID(transID int64) int64 {
+func NewTx(transID int64) int64 {
 	temp, ok := transactionMap.Load(transID)
 	if !ok {
 		panic("invalid transID")
@@ -88,7 +88,7 @@ func NewTxID(transID int64) int64 {
 	return tx.ID()
 }
 
-func NewTx(transID int64, txID int64, f statedb.TxFunction, params ...interface{}) (tx *statedb.Tx) {
+func NewTxCurrency(transID int64, txID int64, f statedb.TxFunction, params ...interface{}) (tx *statedb.Tx) {
 	temp, ok := transactionMap.Load(transID)
 	if !ok {
 		panic("invalid transID")
@@ -379,7 +379,7 @@ func BeginBlock(transID int64) {
 	state := GetWorldAppState(transID, 0)
 
 	state.BlockHeight = state.BlockHeight + 1
-	SetWorldAppState(transID, NewTxID(transID), state)
+	SetWorldAppState(transID, NewTx(transID), state)
 }
 
 //RollbackBlock rollback block changes
