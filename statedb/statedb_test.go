@@ -1,8 +1,8 @@
 package statedb
 
 import (
-	"github.com/bcbchain/bclib/jsoniter"
 	"fmt"
+	"github.com/bcbchain/bclib/jsoniter"
 	. "gopkg.in/check.v1"
 	"strconv"
 	"strings"
@@ -298,7 +298,7 @@ func testTxGetSet(c *C) {
 	defer sdb.Close()
 
 	ts := sdb.NewCommittableTransaction()
-	tx := ts.NewTx()
+	tx := ts.NewTx(nil)
 
 	for i := 0; i < 20; i++ {
 		temp := strconv.Itoa(i)
@@ -342,7 +342,7 @@ func testRollbackPanicMaxZero(c *C) {
 	for i := 0; i < 20; i++ {
 		temp := strconv.Itoa(i)
 		ts := sdb.NewCommittableTransaction()
-		tx := ts.NewTx()
+		tx := ts.NewTx(nil)
 
 		tx.Set("key"+temp, []byte("value"+temp))
 		tx.Commit()
@@ -364,7 +364,7 @@ func testRollbackPanic(c *C) {
 	for i := 0; i < 20; i++ {
 		temp := strconv.Itoa(i)
 		ts := sdb.NewCommittableTransaction()
-		tx := ts.NewTx()
+		tx := ts.NewTx(nil)
 
 		tx.Set("key"+temp, []byte("value"+temp))
 		tx.Commit()
@@ -381,7 +381,7 @@ func testRollbackNormal(c *C) {
 	for i := 0; i < 20; i++ {
 		temp := strconv.Itoa(i)
 		ts := sdb.NewCommittableTransaction()
-		tx := ts.NewTx()
+		tx := ts.NewTx(nil)
 
 		tx.Set("key"+temp, []byte("value"+temp))
 		tx.Commit()

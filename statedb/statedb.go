@@ -3,7 +3,6 @@ package statedb
 import (
 	"github.com/bcbchain/bclib/bcdb"
 	"github.com/bcbchain/bclib/jsoniter"
-	"runtime"
 	"sync/atomic"
 )
 
@@ -71,42 +70,32 @@ func (s *StateDB) Get(key string) []byte {
 	return value
 }
 
-func (s *StateDB) NewCommittableTransaction(maxTxCount, goRoutineCount int) *Transaction {
+func (s *StateDB) NewCommittableTransaction() *Transaction {
 
 	// There can only be one committable transaction at a time.
 	if s.committableTransaction != nil {
 		panic("must commit last transaction")
 	}
-	if goRoutineCount <= 0 {
-		goRoutineCount = 2 * runtime.NumCPU()
-	}
 
 	trans := &Transaction{
-		transactionID:  s.calcTransactionID(true),
-		stateDB:        s,
-		maxTxCount:     maxTxCount,
-		goRoutineCount: goRoutineCount,
-		wBuffer:        make(map[string][]byte),
-		rBuffer:        newKVbuffer(uint(maxTxCount * 256)),
-		committable:    true,
+		transactionID: s.calcTransactionID(true),
+		stateDB:       s,
+		wBuffer:       make(map[string][]byte),
+		rBuffer:       newKVbuffer(uint(1024 * 256)),
+		committable:   true,
 	}
 	s.committableTransaction = trans
 	return trans
 }
 
-func (s *StateDB) NewRollbackTransaction(maxTxCount, goRoutineCount int) *Transaction {
-	if goRoutineCount <= 0 {
-		goRoutineCount = 2 * runtime.NumCPU()
-	}
+func (s *StateDB) NewRollbackTransaction() *Transaction {
 
 	return &Transaction{
-		transactionID:  s.calcTransactionID(false),
-		stateDB:        s,
-		maxTxCount:     maxTxCount,
-		goRoutineCount: goRoutineCount,
-		wBuffer:        make(map[string][]byte),
-		rBuffer:        newKVbuffer(uint(maxTxCount * 256)),
-		committable:    false,
+		transactionID: s.calcTransactionID(false),
+		stateDB:       s,
+		wBuffer:       make(map[string][]byte),
+		rBuffer:       newKVbuffer(uint(1024 * 256)), // TODO
+		committable:   false,
 	}
 }
 

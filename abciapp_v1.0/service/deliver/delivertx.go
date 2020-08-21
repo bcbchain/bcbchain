@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	types3 "github.com/bcbchain/bcbchain/abciapp/service/types"
+	statedb2 "github.com/bcbchain/bcbchain/statedb"
 	"github.com/bcbchain/bclib/tx/v1"
 	"math/big"
 	"strconv"
@@ -429,4 +430,168 @@ func map2String(m map[smc.Address]uint64) string {
 	}
 	b.WriteString("}")
 	return b.String()
+}
+
+func (conn *DeliverConnection) RunExecTx(tx *statedb2.Tx, params ...interface{}) (doneSuccess bool, response interface{}) {
+
+	transaction := params[0].(tx1.Transaction)
+	fromAddr := params[1].(smc.Address)
+	transID := params[2].(int64)
+
+	var bcError smc.Error
+	var bFailed bool
+
+	var err error
+	var txState *statedb.TxState
+	var contract *bctypes.Contract
+	if !bFailed {
+		//Generate txState to operate stateDB
+		txState = conn.stateDB.NewTxState(transaction.To, fromAddr)
+
+		// Get contract detailed information depends on contract address
+		contract, err = conn.stateDB.GetContract(transaction.To)
+		if err != nil {
+			bFailed = true
+
+			conn.logger.Error("failed json.Unmarshal(contractBytes,contract)", "error", err)
+			bcError.ErrorCode = bcerrors.ErrCodeLowLevelError
+			bcError.ErrorDesc = err.Error()
+
+		}
+		if !bFailed && contract == nil {
+			bFailed = true
+
+			conn.logger.Error("can't find this contract from DB", "contract address", transaction.To)
+			bcError.ErrorCode = bcerrors.ErrCodeDeliverTxNoContract
+			bcError.ErrorDesc = ""
+
+		}
+	}
+
+	if bFailed {
+		// write failure status into hash
+		res := response.(types.ResponseDeliverTx)
+		res.Code = bcError.ErrorCode
+		res.Log = bcError.Error()
+
+		return true, res
+	}
+
+	// Generate accounts and execute
+	sender := &stubapi.Account{
+		Addr:    fromAddr,
+		TxState: txState,
+	}
+
+	owner := &stubapi.Account{
+		Addr:    contract.Owner,
+		TxState: txState,
+	}
+
+	proposer := &stubapi.Account{
+		Addr: conn.sponser,
+		//gTokenState,
+	}
+	rewarder := &stubapi.Account{
+		Addr: conn.rewarder,
+		//gTokenState,
+	}
+
+	invokeContext := &stubapi.InvokeContext{
+		Sender:      sender,
+		Owner:       owner,
+		TxState:     txState,
+		BlockHash:   conn.blockHash,
+		BlockHeader: conn.blockHeader,
+		Proposer:    proposer,
+		Rewarder:    rewarder,
+		GasLimit:    transaction.GasLimit,
+		Note:        transaction.Note,
+	}
+
+	item := &stubapi.InvokeParams{
+		Ctx:    invokeContext,
+		Params: transaction.Data,
+	}
+
+	conn.logger.Debug("start invoke.....")
+
+	//write response into hash
+	invokeRes, bcerr := conn.docker.Invoke(item, transID)
+	if bcerr.ErrorCode != bcerrors.ErrCodeOK {
+		conn.logger.Error("docker invoke error.....", "error", bcerr.Error())
+		txState.RollbackTx()
+		invokeRes.Code = bcerr.ErrorCode
+		invokeRes.Log = bcerr.Error()
+	}
+
+	return true, invokeRes
+}
+
+func (conn *DeliverConnection) HandleResponse(
+	tx *statedb2.Tx,
+	txStr string,
+	rawTxV1 *bctx.Transaction,
+	response stubapi.Response,
+	connV2 *deliver.AppDeliver) (resDeliverTx types.ResponseDeliverTx) {
+
+	if response.Code == stubapi.RESPONSE_CODE_UPDATE_VALIDATORS {
+		conn.udValidator = true
+		conn.validators = append(conn.validators, response.Data)
+		resDeliverTx.Data = ""
+	} else if response.Code == stubapi.RESPONSE_CODE_RUNUPGRADE1TO2 {
+		conn.appState.ChainVersion, _ = strconv.ParseInt(response.Data, 10, 64)
+		resDeliverTx.Data = ""
+	} else {
+		conn.RespCode = response.Code
+		conn.RespData = response.Data
+	}
+
+	resDeliverTx = types.ResponseDeliverTx{
+		Code:     bcerrors.ErrCodeOK,
+		Tags:     response.Tags,
+		Log:      "Deliver tx succeed",
+		GasLimit: rawTxV1.GasLimit,
+		GasUsed:  response.GasUsed,
+		Fee:      response.GasPrice * response.GasUsed,
+		Data:     response.Data,
+	}
+	conn.NameVersion = response.Log
+	if response.Code != bcerrors.ErrCodeOK {
+		conn.calcDeliverTxHash([]byte(txStr), &resDeliverTx, nil, connV2)
+		return
+	}
+
+	conn.logger.Debug("deliverBCTx()", "resDeliverTx length", len(resDeliverTx.String()), "resDeliverTx", resDeliverTx.String())
+	stateTx, _ := statedbhelper.CommitTx(tx.Transaction().ID(), tx.ID())
+	conn.logger.Debug("deliverBCTx() ", "stateTx length", len(stateTx), "stateTx ", string(stateTx))
+
+	conn.calcDeliverTxHash([]byte(txStr), &resDeliverTx, stateTx, connV2)
+
+	//calculate Fee, will use safeAdd() method
+	conn.fee = conn.fee + resDeliverTx.Fee
+
+	// Fixs bug #2092. For backward compatibility, once when the block reach the specified height,
+	// using the correct function to record rewards data in block
+	if softforks.V1_0_2_3233(conn.appState.BlockHeight) {
+		conn.rewards = map[string]uint64{}
+		conn.logger.Debug("DeliverTx:  V1_0_2_3233 softfork is unavailable")
+	} else {
+		conn.logger.Debug("DeliverTx:  V1_0_2_3233 softfork is avalible")
+	}
+	// calculate amount of fee for each reward
+	for k, v := range response.RewardValues {
+		conn.rewards[k] = conn.rewards[k] + v
+	}
+
+	// if connV2 not nil, then add rewardValues,fee and deliverHash to connV2
+	if connV2 != nil {
+		connV2.AddFee(int64(resDeliverTx.Fee))
+		connV2.AddRewardValues(response.RewardValues)
+	}
+
+	conn.logger.Debug("deliverBCTx()", "conn.fee", conn.fee, "conn.rewards", map2String(conn.rewards))
+	conn.logger.Debug("end deliver invoke.....")
+
+	return
 }

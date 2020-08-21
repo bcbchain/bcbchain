@@ -7,7 +7,7 @@ import (
 	"sync"
 )
 
-type TxFunction func(tx *Tx, params ...interface{}) bool
+type TxFunction func(tx *Tx, params ...interface{}) (bool, interface{})
 
 type Tx struct {
 	txID    int64
@@ -27,14 +27,16 @@ type Tx struct {
 
 	export_buffer1 []byte
 	export_buffer2 map[string][]byte
+
+	response interface{}
 }
 
-func (t *Tx) ID() int64 {
-	return t.txID
+func (tx *Tx) ID() int64 {
+	return tx.txID
 }
 
-func (t *Tx) Transaction() *Transaction {
-	return t.transaction
+func (tx *Tx) Transaction() *Transaction {
+	return tx.transaction
 }
 
 func (tx *Tx) Get(key string) []byte {
@@ -84,7 +86,7 @@ func (tx *Tx) exec() {
 	}
 
 	//executing function of tx
-	tx.doneSuccess = tx.txFunc(tx, tx.txParams...)
+	tx.doneSuccess, tx.response = tx.txFunc(tx, tx.txParams...)
 }
 
 func (tx *Tx) commit() {
@@ -125,4 +127,8 @@ func (tx *Tx) Rollback() {
 	tx.reset()
 	tx.done = false
 	tx.doneSuccess = false
+}
+
+func (tx *Tx) Response() interface{} {
+	return tx.response
 }

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	types4 "github.com/bcbchain/bcbchain/abciapp/service/types"
+	"github.com/bcbchain/bcbchain/statedb"
 	"sort"
 	"strconv"
 	"strings"
@@ -128,70 +129,7 @@ func (app *AppDeliver) runDeliverTx(tx []byte, transaction types2.Transaction, p
 	}
 
 	//emit new summary fee  and transferFee receipts
-	tags, totalFee := app.emitFeeReceipts(transaction, response, true)
-
-	resDeliverTx.Code = response.Code
-	resDeliverTx.Log = response.Log
-	resDeliverTx.Tags = tags
-	resDeliverTx.GasLimit = uint64(transaction.GasLimit)
-	resDeliverTx.GasUsed = uint64(response.GasUsed)
-	resDeliverTx.Fee = uint64(totalFee)
-	resDeliverTx.Data = response.Data
-	resDeliverTxStr := resDeliverTx.String()
-	app.logger.Debug("deliverBCTx()", "resDeliverTx length", len(resDeliverTxStr), "resDeliverTx", resDeliverTxStr) // log value of async instance must be immutable to avoid data race
-
-	stateTx, txBuffer := statedbhelper.CommitTx(app.transID, app.txID)
-	app.calcDeliverHash(tx, &resDeliverTx, stateTx)
-	app.logger.Debug("deliverBCTx() ", "stateTx length", len(stateTx), "stateTx ", string(stateTx))
-
-	//calculate Fee
-	app.fee = app.fee + response.Fee
-	app.logger.Debug("deliverBCTx()", "app.fee", app.fee, "app.rewards", map2String(app.rewards))
-
-	app.logger.Debug("end deliver invoke.....")
-	return resDeliverTx, combineBuffer(nonceBuffer, txBuffer)
-}
-
-func (app *AppDeliver) runDeliverTxCurrency(tx []byte, transaction types2.Transaction, pubKey crypto.PubKeyEd25519) (resDeliverTx types.ResponseDeliverTx, txBuffer map[string][]byte) {
-	resDeliverTx.Code = types2.CodeOK
-
-	if len(transaction.Note) > types2.MaxSizeNote {
-		return app.reportFailure(tx, types2.ErrDeliverTx, "tx note is out of range"), nil
-	}
-
-	sender := pubKey.Address(statedbhelper.GetChainID())
-	nonceBuffer, err := statedbhelper.SetAccountNonce(app.transID, app.txID, sender, transaction.Nonce)
-	if err != nil {
-		app.logger.Error("SetAccountNonce failed:", err)
-		return app.reportFailure(tx, types2.ErrDeliverTx, "SetAccountNonce failed"), nil
-	}
-
-	txHash := common.HexBytes(algorithm.CalcCodeHash(string(tx)))
-	adp := adapter.GetInstance()
-	response := adp.InvokeTx(app.blockHeader, app.transID, app.txID, sender, transaction, pubKey.Bytes(), txHash, app.blockHash)
-	if response.Code != types2.CodeOK {
-		app.logger.Error("docker invoke error.....", "error", response.Log)
-		app.logger.Debug("docker invoke error.....", "response", response.String())
-		statedbhelper.RollbackTx(app.transID, app.txID)
-		adp.RollbackTx(app.transID, app.txID)
-		resDeliverTx, txBuffer, totalFee := app.reportInvokeFailure(tx, transaction, response)
-		resDeliverTx.Fee = uint64(totalFee)
-		return resDeliverTx, combineBuffer(nonceBuffer, txBuffer)
-	}
-	app.logger.Debug("docker invoke response.....", "code", response.Code)
-
-	// pack validators if update validator info
-	if hasUpdateValidatorReceipt(response.Tags) {
-		app.packValidators()
-	}
-
-	// pack side chain genesis info
-	if t, ok := hasSideChainGenesisReceipt(response.Tags); ok {
-		app.packSideChainGenesis(t)
-	}
-
-	//emit new summary fee  and transferFee receipts
-	tags, totalFee := app.emitFeeReceipts(transaction, response, true)
+	tags, totalFee := app.emitFeeReceipts(transaction, response.Tags, true)
 
 	resDeliverTx.Code = response.Code
 	resDeliverTx.Log = response.Log
@@ -270,7 +208,7 @@ func (app *AppDeliver) reportInvokeFailure(tx []byte, transaction types2.Transac
 	txBuffer map[string][]byte,
 	totalFee int64) {
 
-	rcpts, totalFee := app.emitFeeReceipts(transaction, response, false)
+	rcpts, totalFee := app.emitFeeReceipts(transaction, response.Tags, false)
 	resDeliverTx = types.ResponseDeliverTx{
 		Code:     response.Code,
 		Log:      response.Log,
@@ -294,7 +232,7 @@ func (app *AppDeliver) ReportInvokeFailure(tx []byte, transaction types2.Transac
 	txBuffer map[string][]byte,
 	totalFee int64) {
 
-	rcpts, totalFee := app.emitFeeReceipts(transaction, response, false)
+	rcpts, totalFee := app.emitFeeReceipts(transaction, response.Tags, false)
 	resDeliverTx = types.ResponseDeliverTx{
 		Code:     response.Code,
 		Log:      response.Log,
@@ -333,21 +271,20 @@ func map2String(m map[types2.Address]int64) string {
 	return b.String()
 }
 
-func (app *AppDeliver) emitFeeReceipts(transaction types2.Transaction, response *types2.Response, isDlvOK bool) (tags []common.KVPair, totalFee int64) {
-	fees, feetags, totalFee := gatherFeesByFromAddr(response.Tags, isDlvOK)
+func (app *AppDeliver) emitFeeReceipts(transaction types2.Transaction, inPutTags []common.KVPair, isDlvOK bool) (tags []common.KVPair, totalFee int64) {
+	fees, feetags, totalFee := gatherFeesByFromAddr(inPutTags, isDlvOK)
 	app.logger.Debug("get fee receipts", "receipts", mapFee2String(fees))
 	totalFeeReceipts, err := emitTotalFeeReceipt(fees)
 	if err != nil {
 		app.logger.Error("emit fee receipt failed", "error", err.Error())
 		return nil, 0
 	}
+
 	// if transaction was succeed, save response tags
-	if isDlvOK {
-		tags = response.Tags
-	} else {
-		//fill original fee receipts in deliver response even it's failed.
+	if !isDlvOK {
 		tags = feetags
 	}
+
 	//nolint
 	keys := make([]types2.Address, 0)
 	for k := range totalFeeReceipts {
@@ -799,4 +736,73 @@ func combineBuffer(nonceBuffer, txBuffer map[string][]byte) map[string][]byte {
 	}
 
 	return txBuffer
+}
+
+func (app *AppDeliver) RunExecTx(tx *statedb.Tx, params ...interface{}) (doneSuccess bool, response interface{}) {
+	doneSuccess = true
+	txHash := params[0].(common.HexBytes)
+	transaction := params[1].(types2.Transaction)
+	sender := params[2].(types2.Address)
+	pubKey := params[3].(crypto.PubKeyEd25519)
+
+	adp := adapter.GetInstance()
+	invokeRes := adp.InvokeTx(app.blockHeader, app.transID, app.txID, sender, transaction, pubKey.Bytes(), txHash, app.blockHash)
+	app.logger.Debug("docker invoke response.....", "response", response)
+	if invokeRes.Code != types2.CodeOK {
+		app.logger.Error("docker invoke error.....", "error", invokeRes.Log)
+		app.logger.Debug("docker invoke error.....", "response", invokeRes.String())
+		statedbhelper.RollbackTx(app.transID, app.txID)
+		adp.RollbackTx(app.transID, app.txID)
+	}
+
+	resDeliverTx := response.(types.ResponseDeliverTx)
+	resDeliverTx.Code = invokeRes.Code
+	resDeliverTx.Log = invokeRes.Log
+	resDeliverTx.GasLimit = uint64(invokeRes.GasLimit)
+	resDeliverTx.GasUsed = uint64(invokeRes.GasUsed)
+	resDeliverTx.Fee = uint64(invokeRes.Fee)
+	resDeliverTx.Data = invokeRes.Data
+
+	return true, resDeliverTx
+}
+
+func (app *AppDeliver) HandleResponse(txStr string, rawTxV2 *types2.Transaction, response types.ResponseDeliverTx) (resDeliverTx types.ResponseDeliverTx) {
+
+	//emit new summary fee  and transferFee receipts
+	tags, _ := app.emitFeeReceipts(*rawTxV2, response.Tags, true)
+	resDeliverTx.Tags = tags
+
+	var stateTx []byte
+	if resDeliverTx.Code == types2.CodeOK {
+		// pack validators if update validator info
+		if hasUpdateValidatorReceipt(response.Tags) {
+			app.packValidators()
+		}
+
+		// pack side chain genesis info
+		if t, ok := hasSideChainGenesisReceipt(response.Tags); ok {
+			app.packSideChainGenesis(t)
+		}
+
+		resDeliverTxStr := resDeliverTx.String()
+		app.logger.Debug("deliverBCTx()", "resDeliverTx length", len(resDeliverTxStr), "resDeliverTx", resDeliverTxStr) // log value of async instance must be immutable to avoid data race
+
+		stateTx, _ = statedbhelper.CommitTx(app.transID, app.txID)
+		app.logger.Debug("deliverBCTx() ", "stateTx length", len(stateTx), "stateTx ", string(stateTx))
+
+	} else {
+		//commit transactions of fee
+		if len(tags) > 0 {
+			stateTx, _ = statedbhelper.CommitTx(app.transID, app.txID)
+		}
+	}
+	app.calcDeliverHash([]byte(txStr), &resDeliverTx, stateTx)
+
+	//calculate Fee
+	app.fee = app.fee + int64(response.Fee)
+	app.logger.Debug("deliverBCTx()", "app.fee", app.fee, "app.rewards", map2String(app.rewards))
+
+	app.logger.Debug("end deliver invoke.....")
+
+	return resDeliverTx
 }

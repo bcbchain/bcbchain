@@ -48,7 +48,7 @@ func NewCommittableTransactionID() (int64, *statedb.Transaction) {
 		return currentCommittableTransaction.ID(), currentCommittableTransaction
 	}
 
-	transaction := stateDB.NewCommittableTransaction(2000, 0)
+	transaction := stateDB.NewCommittableTransaction()
 	currentCommittableTransaction = transaction
 	transactionMap.Store(transaction.ID(), &Trans{
 		Transaction: transaction,
@@ -60,7 +60,7 @@ func NewCommittableTransactionID() (int64, *statedb.Transaction) {
 
 //NewRollbackTransactionID create a rollback transaction and return ID
 func NewRollbackTransactionID() (int64, *statedb.Transaction) {
-	transaction := stateDB.NewRollbackTransaction(1, 0)
+	transaction := stateDB.NewRollbackTransaction()
 	transactionMap.Store(transaction.ID(), &Trans{
 		Transaction: transaction,
 		TxMap:       make(map[int64]*statedb.Tx),
@@ -83,20 +83,9 @@ func NewTx(transID int64) int64 {
 	}
 	trans := temp.(*Trans)
 
-	tx := trans.Transaction.NewTx(nil)
+	tx := trans.Transaction.NewTx(nil, nil)
 	trans.TxMap[tx.ID()] = tx
 	return tx.ID()
-}
-
-func NewTxCurrency(transID int64, txID int64, f statedb.TxFunction, params ...interface{}) (tx *statedb.Tx) {
-	temp, ok := transactionMap.Load(transID)
-	if !ok {
-		panic("invalid transID")
-	}
-	trans := temp.(*Trans)
-
-	tx = trans.Transaction.NewTxCurrency(txID, f, params)
-	return tx
 }
 
 func Get(transID, txID int64, key string) ([]byte, error) {
@@ -328,6 +317,11 @@ func SetAccountNonce(transID, txID int64, exAddress types.Address, nonce uint64)
 	nonceBuffer[childKey] = accountData
 	trans.Transaction.Set(childKey, accountData)
 
+	return
+}
+
+func SetAccountNonceEx(exAddress types.Address, nonce uint64) (err error) {
+	_, err = SetAccountNonce(currentCommittableTransaction.ID(), 0, exAddress, nonce)
 	return
 }
 

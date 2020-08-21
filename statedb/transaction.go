@@ -25,7 +25,7 @@ func (trans *Transaction) ID() int64 {
 	return trans.transactionID
 }
 
-func (trans *Transaction) NewTx(f TxFunction, params ...interface{}) (tx *Tx) {
+func (trans *Transaction) NewTx(f TxFunction, response interface{}, params ...interface{}) (tx *Tx) {
 	tx = &Tx{
 		txID:        trans.calcTxID(),
 		wBuffer:     make(map[string][]byte),
@@ -35,20 +35,7 @@ func (trans *Transaction) NewTx(f TxFunction, params ...interface{}) (tx *Tx) {
 		txFunc:      f,
 		txParams:    params,
 		transaction: trans,
-	}
-	return
-}
-
-func (trans *Transaction) NewTxCurrency(txID int64, f TxFunction, params ...interface{}) (tx *Tx) {
-	tx = &Tx{
-		txID:        txID,
-		wBuffer:     make(map[string][]byte),
-		rBuffer:     make(map[string][]byte),
-		wBits:       newConflictBits(trans.maxTxCount * 256),
-		rBits:       newConflictBits(trans.maxTxCount * 256),
-		txFunc:      f,
-		txParams:    params,
-		transaction: trans,
+		response:    response,
 	}
 	return
 }
