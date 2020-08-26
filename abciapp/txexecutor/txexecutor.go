@@ -5,6 +5,7 @@ import (
 	"github.com/bcbchain/bcbchain/abciapp/txpool"
 	"github.com/bcbchain/bcbchain/abciapp_v1.0/contract/stubapi"
 	deliverV1 "github.com/bcbchain/bcbchain/abciapp_v1.0/service/deliver"
+	"github.com/bcbchain/bcbchain/common/statedbhelper"
 	"github.com/bcbchain/bcbchain/statedb"
 	"github.com/bcbchain/bclib/tendermint/abci/types"
 	"github.com/bcbchain/bclib/tendermint/tmlibs/log"
@@ -13,6 +14,8 @@ import (
 
 type TxExecutor interface {
 	GetResponse() []types.ResponseDeliverTx
+	SetTransaction(transactionID int64)
+	SetdeliverAppV1(*deliverV1.DeliverConnection)
 }
 
 type txExecutor struct {
@@ -29,13 +32,13 @@ type txExecutor struct {
 
 var _ TxExecutor = (*txExecutor)(nil)
 
-func NewTxExecutor(tp txpool.TxPool, l log.Logger, deliverAppV1 *deliverV1.DeliverConnection, deliverAppV2 *deliverV2.AppDeliver) TxExecutor {
+func NewTxExecutor(tp txpool.TxPool, l log.Logger, deliverAppV2 *deliverV2.AppDeliver) TxExecutor {
 	te := &txExecutor{
 		tpool:         tp,
 		maxRoutineNum: runtime.NumCPU(),
 		logger:        l,
 		deliverAppV2:  deliverAppV2,
-		deliverAppV1:  deliverAppV1,
+		//deliverAppV1:  deliverAppV1,
 	}
 
 	resChan := make(chan types.ResponseDeliverTx)
@@ -94,4 +97,13 @@ func (te *txExecutor) collectResponseRoutine(resChan <-chan types.ResponseDelive
 			}
 		}
 	}
+}
+
+func (te *txExecutor) SetTransaction(transactionID int64) {
+	trans := statedbhelper.GetTransBytransID(transactionID)
+	te.transaction = trans.Transaction
+}
+
+func (te *txExecutor) SetdeliverAppV1(deliverAppV1 *deliverV1.DeliverConnection) {
+	te.deliverAppV1 = deliverAppV1
 }
