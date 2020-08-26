@@ -75,10 +75,13 @@ func NewBCChainApplication(config common.Config, logger log.Loggerf) *BCChainApp
 
 	if checkGenesisChainVersion() == 0 {
 		app.appv1 = appv1.NewBCChainApplication(logger)
+		app.txPool.SetdeliverAppV1(app.appv1.GetConnDeliver())
+		app.txExecutor.SetdeliverAppV1(app.appv1.GetConnDeliver())
 	}
 	logger.Info("Init bcchain end")
-	app.txPool = txpool.NewTxPool(runtime.NumCPU(), logger, app.appv1.GetConnDeliver(), app.connDeliver)
-	app.txExecutor = txexecutor.NewTxExecutor(app.txPool, logger, app.appv1.GetConnDeliver(), app.connDeliver)
+
+	app.txPool = txpool.NewTxPool(runtime.NumCPU(), logger, app.connDeliver)
+	app.txExecutor = txexecutor.NewTxExecutor(app.txPool, logger, app.connDeliver)
 	return &app
 }
 
@@ -236,6 +239,7 @@ func (app *BCChainApplication) InitChain(req types.RequestInitChain) types.Respo
 		res.Log = "invalid genesis doc"
 	}
 	app.txPool.SetTransaction(app.connDeliver.TransID())
+	app.txExecutor.SetTransaction(app.connDeliver.TransID())
 	return res
 }
 
@@ -259,6 +263,7 @@ func (app *BCChainApplication) BeginBlock(req types.RequestBeginBlock) types.Res
 	}
 
 	app.txPool.SetTransaction(app.connDeliver.TransID())
+	app.txExecutor.SetTransaction(app.connDeliver.TransID())
 	return res
 }
 
