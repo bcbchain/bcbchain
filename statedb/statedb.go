@@ -83,6 +83,7 @@ func (s *StateDB) NewCommittableTransaction(maxTxCount int) *Transaction {
 		maxTxCount:    maxTxCount,
 		wBuffer:       make(map[string][]byte),
 		rBuffer:       newKVbuffer(uint(1024 * 256)),
+		wBitsMerged:   newConflictBits(1024 * 256),
 		committable:   true,
 	}
 	s.committableTransaction = trans

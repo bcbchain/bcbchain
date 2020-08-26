@@ -76,10 +76,14 @@ func (tp *txPool) PutDeliverTxs(deliverTxs []string) {
 
 // GetExecTxs 获取可执行交易列表，为准备妥当时阻塞
 func (tp *txPool) GetExecTxs(execTxNum int) []*statedb.Tx {
+	if tp.deliverTxsNum == 0 {
+		<-tp.createdExecTxChan
+	}
+
 	// 重置数量
-	if tp.deliverTxsNum <= execTxNum && tp.execTxs.Len() == tp.deliverTxsNum {
+	if tp.deliverTxsNum <= execTxNum {
 		execTxNum = tp.deliverTxsNum
-	} else if tp.deliverTxsNum > execTxNum && tp.execTxs.Len() == tp.leftNum {
+	} else if tp.deliverTxsNum > execTxNum && tp.leftNum < execTxNum {
 		execTxNum = tp.leftNum
 	}
 
@@ -151,8 +155,6 @@ func (tp *txPool) parseDeliverTxsRoutine(maxParseRoutineNum int) {
 					wga.Wait()
 				}
 			}
-		default:
-			// TODO
 		}
 	}
 }
@@ -211,6 +213,7 @@ func (tp *txPool) createExecTxRoutine() {
 				}
 				execTx := tp.transaction.NewTx(tp.deliverAppV1.RunExecTx, response, *pTx.rawTxV1, pTx.sender, tp.transaction.ID())
 				tp.execTxs.PushBack(execTx)
+				tp.createdExecTxChan <- struct{}{}
 			} else if pTx.rawTxV2 != nil {
 				var response interface{}
 				err := statedbhelper.SetAccountNonceEx(pTx.sender, pTx.rawTxV2.Nonce)
@@ -223,11 +226,10 @@ func (tp *txPool) createExecTxRoutine() {
 
 				execTx := tp.transaction.NewTx(tp.deliverAppV2.RunExecTx, response, pTx.txHash, *pTx.rawTxV2, pTx.sender, pTx.pubKey)
 				tp.execTxs.PushBack(execTx)
+				tp.createdExecTxChan <- struct{}{}
 			} else {
 				panic("invalid rawTx version")
 			}
-		default:
-			// TODO
 		}
 	}
 }
