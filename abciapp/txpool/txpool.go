@@ -23,6 +23,7 @@ type TxPool interface {
 	GetExecTxs(execTxNum int) []*statedb.Tx
 	GetParseTx(index int) *ParseTx
 	GetDeliverTxNum() int
+	SetTransaction(transactionID int64)
 }
 
 // 交易池对象
@@ -48,7 +49,7 @@ type txPool struct {
 
 var _ TxPool = (*txPool)(nil)
 
-func NewTxPool(maxParseRoutineNum int, l log.Logger) TxPool {
+func NewTxPool(maxParseRoutineNum int, l log.Logger, deliverAppV1 *deliverV1.DeliverConnection, deliverAppV2 *deliverV2.AppDeliver) TxPool {
 	tp := &txPool{
 		deliverTxsChan: make(chan []string),
 
@@ -56,7 +57,9 @@ func NewTxPool(maxParseRoutineNum int, l log.Logger) TxPool {
 		execTxs:           list.New(),
 		createdExecTxChan: make(chan struct{}),
 
-		logger: l,
+		logger:       l,
+		deliverAppV1: deliverAppV1,
+		deliverAppV2: deliverAppV2,
 	}
 
 	go tp.parseDeliverTxsRoutine(maxParseRoutineNum)
@@ -113,6 +116,12 @@ func (tp *txPool) GetParseTx(index int) *ParseTx {
 // GetDeliverTxNum 返回当前区块交易数量
 func (tp *txPool) GetDeliverTxNum() int {
 	return tp.deliverTxsNum
+}
+
+// SetTransaction 设置交易池中的Transaction对象
+func (tp *txPool) SetTransaction(transactionID int64) {
+	trans := statedbhelper.GetTransBytransID(transactionID)
+	tp.transaction = trans.Transaction
 }
 
 // parseDeliverTxsRoutine 交易解析协程

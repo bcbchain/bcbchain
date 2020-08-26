@@ -29,11 +29,13 @@ type txExecutor struct {
 
 var _ TxExecutor = (*txExecutor)(nil)
 
-func NewTxExecutor(tp txpool.TxPool, l log.Logger) TxExecutor {
+func NewTxExecutor(tp txpool.TxPool, l log.Logger, deliverAppV1 *deliverV1.DeliverConnection, deliverAppV2 *deliverV2.AppDeliver) TxExecutor {
 	te := &txExecutor{
 		tpool:         tp,
 		maxRoutineNum: runtime.NumCPU(),
 		logger:        l,
+		deliverAppV2:  deliverAppV2,
+		deliverAppV1:  deliverAppV1,
 	}
 
 	resChan := make(chan types.ResponseDeliverTx)
