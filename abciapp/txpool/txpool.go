@@ -212,6 +212,8 @@ func (tp *txPool) createExecTxRoutine() {
 			execTxNum = tp.deliverTxsNum
 		} else if tp.execTxs.Len() >= tp.cpuNum {
 			execTxNum = tp.cpuNum
+		} else if tp.leftNum <= tp.cpuNum && tp.leftNum == tp.execTxs.Len() {
+			execTxNum = tp.leftNum
 		}
 
 		if execTxNum > 0 {
