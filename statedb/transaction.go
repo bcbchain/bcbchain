@@ -9,6 +9,8 @@ import (
 	"sync/atomic"
 )
 
+const maxTxCount = 2000
+
 type Transaction struct {
 	transactionID  int64
 	stateDB        *StateDB
@@ -27,11 +29,13 @@ func (trans *Transaction) ID() int64 {
 
 func (trans *Transaction) NewTx(f TxFunction, response interface{}, params ...interface{}) (tx *Tx) {
 	tx = &Tx{
-		txID:        trans.calcTxID(),
-		wBuffer:     make(map[string][]byte),
-		rBuffer:     make(map[string][]byte),
-		wBits:       newConflictBits(trans.maxTxCount * 256),
-		rBits:       newConflictBits(trans.maxTxCount * 256),
+		txID:    trans.calcTxID(),
+		wBuffer: make(map[string][]byte),
+		rBuffer: make(map[string][]byte),
+		//wBits:       newConflictBits(trans.maxTxCount * 256),
+		//rBits:       newConflictBits(trans.maxTxCount * 256),
+		wBits:       newConflictBits(maxTxCount * 256),
+		rBits:       newConflictBits(maxTxCount * 256),
 		txFunc:      f,
 		txParams:    params,
 		transaction: trans,

@@ -70,7 +70,7 @@ func (s *StateDB) Get(key string) []byte {
 	return value
 }
 
-func (s *StateDB) NewCommittableTransaction() *Transaction {
+func (s *StateDB) NewCommittableTransaction(maxTxCount int) *Transaction {
 
 	// There can only be one committable transaction at a time.
 	if s.committableTransaction != nil {
@@ -80,6 +80,7 @@ func (s *StateDB) NewCommittableTransaction() *Transaction {
 	trans := &Transaction{
 		transactionID: s.calcTransactionID(true),
 		stateDB:       s,
+		maxTxCount:    maxTxCount,
 		wBuffer:       make(map[string][]byte),
 		rBuffer:       newKVbuffer(uint(1024 * 256)),
 		committable:   true,

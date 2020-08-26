@@ -48,7 +48,7 @@ func NewCommittableTransactionID() (int64, *statedb.Transaction) {
 		return currentCommittableTransaction.ID(), currentCommittableTransaction
 	}
 
-	transaction := stateDB.NewCommittableTransaction()
+	transaction := stateDB.NewCommittableTransaction(2000)
 	currentCommittableTransaction = transaction
 	transactionMap.Store(transaction.ID(), &Trans{
 		Transaction: transaction,
@@ -857,7 +857,14 @@ func getTrans(transID int64) *Trans {
 	trans := temp.(*Trans)
 	return trans
 }
-
+func GetTransBytransID(transID int64) *Trans {
+	temp, ok := transactionMap.Load(transID)
+	if !ok {
+		panic("invalid transID")
+	}
+	trans := temp.(*Trans)
+	return trans
+}
 func get(transID, txID int64, key string) []byte {
 	temp, ok := transactionMap.Load(transID)
 	if !ok {
