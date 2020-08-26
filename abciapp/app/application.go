@@ -77,8 +77,8 @@ func NewBCChainApplication(config common.Config, logger log.Loggerf) *BCChainApp
 		app.appv1 = appv1.NewBCChainApplication(logger)
 	}
 	logger.Info("Init bcchain end")
-	app.txPool = txpool.NewTxPool(runtime.NumCPU(), logger, app.connDeliver)
-	app.txExecutor = txexecutor.NewTxExecutor(app.txPool, logger, app.connDeliver)
+	app.txPool = txpool.NewTxPool(runtime.NumCPU(), logger, app.appv1.GetConnDeliver(), app.connDeliver)
+	app.txExecutor = txexecutor.NewTxExecutor(app.txPool, logger, app.appv1.GetConnDeliver(), app.connDeliver)
 	return &app
 }
 
