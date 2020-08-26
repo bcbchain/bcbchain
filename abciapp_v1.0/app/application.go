@@ -59,6 +59,10 @@ func NewBCChainApplication(logger log.Loggerf) *BCChainApplication {
 
 	return &app
 }
+func (app *BCChainApplication) GetConnDeliver() *deliver.DeliverConnection {
+
+	return app.connDeliver
+}
 
 func (app *BCChainApplication) Echo(req types.RequestEcho) types.ResponseEcho {
 
