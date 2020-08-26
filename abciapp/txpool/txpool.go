@@ -100,7 +100,8 @@ func (tp *txPool) GetExecTxs(execTxNum int) []*statedb.Tx {
 				}
 
 				execTx := next.Value.(*statedb.Tx)
-				execTxs = append(execTxs, execTx)
+				execTxs[index] = execTx
+				//execTxs = append(execTxs, execTx)
 				tp.execTxs.Remove(next)
 				index++
 			}
