@@ -60,7 +60,6 @@ func NewBCChainApplication(logger log.Loggerf) *BCChainApplication {
 	return &app
 }
 func (app *BCChainApplication) GetConnDeliver() *deliver.DeliverConnection {
-
 	return app.connDeliver
 }
 
