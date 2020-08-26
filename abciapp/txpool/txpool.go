@@ -14,13 +14,14 @@ import (
 	"github.com/bcbchain/bclib/tendermint/tmlibs/common"
 	"github.com/bcbchain/bclib/tendermint/tmlibs/log"
 	"github.com/bcbchain/bclib/types"
+	"runtime"
 	"sync"
 )
 
 // 交易池接口
 type TxPool interface {
 	PutDeliverTxs(deliverTxs []string)
-	GetExecTxs(execTxNum int) []*statedb.Tx
+	GetExecTxs() []*statedb.Tx
 	GetParseTx(index int) *ParseTx
 	GetDeliverTxNum() int
 	SetTransaction(transactionID int64)
@@ -46,6 +47,9 @@ type txPool struct {
 	transaction  *statedb.Transaction
 	deliverAppV1 *deliverV1.DeliverConnection
 	deliverAppV2 *deliverV2.AppDeliver
+
+	cpuNum        int
+	getExecTxChan chan []*statedb.Tx
 }
 
 var _ TxPool = (*txPool)(nil)
@@ -61,6 +65,9 @@ func NewTxPool(maxParseRoutineNum int, l log.Logger, deliverAppV2 *deliverV2.App
 		logger: l,
 		//deliverAppV1: deliverAppV1,
 		deliverAppV2: deliverAppV2,
+
+		cpuNum:        runtime.NumCPU(),
+		getExecTxChan: make(chan []*statedb.Tx),
 	}
 
 	go tp.parseDeliverTxsRoutine(maxParseRoutineNum)
@@ -75,43 +82,9 @@ func (tp *txPool) PutDeliverTxs(deliverTxs []string) {
 }
 
 // GetExecTxs 获取可执行交易列表，为准备妥当时阻塞
-func (tp *txPool) GetExecTxs(execTxNum int) []*statedb.Tx {
-	if tp.deliverTxsNum == 0 {
-		<-tp.createdExecTxChan
-	}
-
-	// 重置数量
-	if tp.deliverTxsNum <= execTxNum {
-		execTxNum = tp.deliverTxsNum
-	} else if tp.deliverTxsNum > execTxNum && tp.leftNum < execTxNum {
-		execTxNum = tp.leftNum
-	}
-
-	// 获取指定数量的可执行交易或者等待交易生成
-	for {
-		if tp.execTxs.Len() >= execTxNum {
-			execTxs := make([]*statedb.Tx, execTxNum)
-
-			index := 0
-			for index < execTxNum {
-				next := tp.execTxs.Front()
-				if next == nil {
-					break
-				}
-
-				execTx := next.Value.(*statedb.Tx)
-				execTxs[index] = execTx
-				//execTxs = append(execTxs, execTx)
-				tp.execTxs.Remove(next)
-				index++
-			}
-
-			tp.leftNum -= execTxNum
-			return execTxs
-		} else {
-			<-tp.createdExecTxChan
-		}
-	}
+func (tp *txPool) GetExecTxs() []*statedb.Tx {
+	tp.logger.Debug("GetExecTxs", "begin", "xxxxxxxxxx")
+	return <-tp.getExecTxChan
 }
 
 // GetParseTx 获取解析后的交易信息
@@ -139,6 +112,7 @@ func (tp *txPool) parseDeliverTxsRoutine(maxParseRoutineNum int) {
 	for {
 		select {
 		case deliverTxs := <-tp.deliverTxsChan:
+			tp.logger.Debug("parseDeliverTxsRoutine", "txs", deliverTxs)
 			tp.deliverTxs = deliverTxs
 			tp.deliverTxsNum = len(deliverTxs)
 			tp.leftNum = tp.deliverTxsNum
@@ -191,6 +165,7 @@ func (tp *txPool) carryParseTxRoutine() {
 
 			if pt.CarryDone() == false {
 				pt.SetCarryDone()
+				tp.logger.Debug("carryParseTxRoutine", "carry", "xxxxxxxx")
 				tp.execTxChan <- pt
 			}
 			bDone = true
@@ -214,7 +189,6 @@ func (tp *txPool) createExecTxRoutine() {
 				}
 				execTx := tp.transaction.NewTx(tp.deliverAppV1.RunExecTx, response, *pTx.rawTxV1, pTx.sender, tp.transaction.ID())
 				tp.execTxs.PushBack(execTx)
-				tp.createdExecTxChan <- struct{}{}
 			} else if pTx.rawTxV2 != nil {
 				var response interface{}
 				err := statedbhelper.SetAccountNonceEx(pTx.sender, pTx.rawTxV2.Nonce)
@@ -227,10 +201,39 @@ func (tp *txPool) createExecTxRoutine() {
 
 				execTx := tp.transaction.NewTx(tp.deliverAppV2.RunExecTx, response, pTx.txHash, *pTx.rawTxV2, pTx.sender, pTx.pubKey)
 				tp.execTxs.PushBack(execTx)
-				tp.createdExecTxChan <- struct{}{}
+				tp.logger.Debug("createExecTxRoutine", "execTx", "xxxxxxx")
 			} else {
 				panic("invalid rawTx version")
 			}
+		}
+
+		var execTxNum int
+		if tp.execTxs.Len() == tp.deliverTxsNum && tp.deliverTxsNum <= tp.cpuNum {
+			execTxNum = tp.deliverTxsNum
+		} else if tp.execTxs.Len() >= tp.cpuNum {
+			execTxNum = tp.cpuNum
+		}
+
+		if execTxNum > 0 {
+			execTxs := make([]*statedb.Tx, execTxNum)
+
+			index := 0
+			for index < execTxNum {
+				next := tp.execTxs.Front()
+				if next == nil {
+					break
+				}
+
+				execTx := next.Value.(*statedb.Tx)
+				execTxs[index] = execTx
+				//execTxs = append(execTxs, execTx)
+				tp.execTxs.Remove(next)
+				index++
+			}
+
+			tp.leftNum -= execTxNum
+			tp.logger.Debug("GetExecTxs", "result", "xxxxxxx")
+			tp.getExecTxChan <- execTxs
 		}
 	}
 }

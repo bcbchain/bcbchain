@@ -755,18 +755,24 @@ func (app *AppDeliver) RunExecTx(tx *statedb.Tx, params ...interface{}) (doneSuc
 		adp.RollbackTx(app.transID, app.txID)
 	}
 
-	resDeliverTx := response.(types.ResponseDeliverTx)
+	response = new(types.ResponseDeliverTx)
+	resDeliverTx := response.(*types.ResponseDeliverTx)
 	resDeliverTx.Code = invokeRes.Code
 	resDeliverTx.Log = invokeRes.Log
 	resDeliverTx.GasLimit = uint64(invokeRes.GasLimit)
 	resDeliverTx.GasUsed = uint64(invokeRes.GasUsed)
 	resDeliverTx.Fee = uint64(invokeRes.Fee)
 	resDeliverTx.Data = invokeRes.Data
+	resDeliverTx.Tags = invokeRes.Tags
+	resDeliverTx.Height = invokeRes.Height
+	resDeliverTx.TxHash = txHash
 
 	return true, resDeliverTx
 }
 
-func (app *AppDeliver) HandleResponse(txStr string, rawTxV2 *types2.Transaction, response types.ResponseDeliverTx) (resDeliverTx types.ResponseDeliverTx) {
+func (app *AppDeliver) HandleResponse(txStr string, rawTxV2 *types2.Transaction, response *types.ResponseDeliverTx) (resDeliverTx types.ResponseDeliverTx) {
+
+	resDeliverTx = *response
 
 	//emit new summary fee  and transferFee receipts
 	tags, _ := app.emitFeeReceipts(*rawTxV2, response.Tags, true)

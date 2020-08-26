@@ -38,11 +38,13 @@ func NewTxExecutor(tp txpool.TxPool, l log.Logger, deliverAppV2 *deliverV2.AppDe
 		maxRoutineNum: runtime.NumCPU(),
 		logger:        l,
 		deliverAppV2:  deliverAppV2,
+		responsesChan: make(chan []types.ResponseDeliverTx),
 		//deliverAppV1:  deliverAppV1,
 	}
 
 	resChan := make(chan types.ResponseDeliverTx)
 	go te.execRoutine(resChan)
+	go te.collectResponseRoutine(resChan)
 
 	return te
 }
@@ -57,7 +59,7 @@ func (te *txExecutor) GetResponse() []types.ResponseDeliverTx {
 // execRoutine 交易执行协程
 func (te *txExecutor) execRoutine(resChan chan<- types.ResponseDeliverTx) {
 	for {
-		execTxs := te.tpool.GetExecTxs(te.maxRoutineNum)
+		execTxs := te.tpool.GetExecTxs()
 		te.transaction.GoBatchExec(execTxs)
 
 		for index, execTx := range execTxs {
@@ -75,8 +77,9 @@ func (te *txExecutor) execRoutine(resChan chan<- types.ResponseDeliverTx) {
 				resDeliverTx := te.deliverAppV2.HandleResponse(
 					parseTx.TxStr(),
 					parseTx.RawTxV2(),
-					execTx.Response().(types.ResponseDeliverTx),
+					execTx.Response().(*types.ResponseDeliverTx),
 				)
+				te.logger.Debug("HandleResponse", "response", "yyyyyyyyyy")
 				resChan <- resDeliverTx
 			} else {
 				// TODO
@@ -91,9 +94,13 @@ func (te *txExecutor) collectResponseRoutine(resChan <-chan types.ResponseDelive
 	for {
 		select {
 		case response := <-resChan:
+			te.logger.Debug("collectResponseRoutine", "response", "mmmmmmmmmmmm")
 			responses = append(responses, response)
+			te.logger.Debug("pppppppppppppp", len(responses), te.tpool.GetDeliverTxNum())
 			if len(responses) == te.tpool.GetDeliverTxNum() {
+				te.logger.Debug("return responses", "responses", "xxxxxxxxxx")
 				te.responsesChan <- responses
+				responses = make([]types.ResponseDeliverTx, 0)
 			}
 		}
 	}
