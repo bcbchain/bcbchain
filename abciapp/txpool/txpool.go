@@ -24,6 +24,7 @@ type TxPool interface {
 	GetParseTx(index int) *ParseTx
 	GetDeliverTxNum() int
 	SetTransaction(transactionID int64)
+	SetdeliverAppV1(*deliverV1.DeliverConnection)
 }
 
 // 交易池对象
@@ -49,7 +50,7 @@ type txPool struct {
 
 var _ TxPool = (*txPool)(nil)
 
-func NewTxPool(maxParseRoutineNum int, l log.Logger, deliverAppV1 *deliverV1.DeliverConnection, deliverAppV2 *deliverV2.AppDeliver) TxPool {
+func NewTxPool(maxParseRoutineNum int, l log.Logger, deliverAppV2 *deliverV2.AppDeliver) TxPool {
 	tp := &txPool{
 		deliverTxsChan: make(chan []string),
 
@@ -57,8 +58,8 @@ func NewTxPool(maxParseRoutineNum int, l log.Logger, deliverAppV1 *deliverV1.Del
 		execTxs:           list.New(),
 		createdExecTxChan: make(chan struct{}),
 
-		logger:       l,
-		deliverAppV1: deliverAppV1,
+		logger: l,
+		//deliverAppV1: deliverAppV1,
 		deliverAppV2: deliverAppV2,
 	}
 
@@ -122,6 +123,10 @@ func (tp *txPool) GetDeliverTxNum() int {
 func (tp *txPool) SetTransaction(transactionID int64) {
 	trans := statedbhelper.GetTransBytransID(transactionID)
 	tp.transaction = trans.Transaction
+}
+
+func (tp *txPool) SetdeliverAppV1(deliverAppV1 *deliverV1.DeliverConnection) {
+	tp.deliverAppV1 = deliverAppV1
 }
 
 // parseDeliverTxsRoutine 交易解析协程
@@ -204,7 +209,6 @@ func (tp *txPool) createExecTxRoutine() {
 						Log:  "SetAccountNonce failed",
 					}
 				}
-
 				execTx := tp.transaction.NewTx(tp.deliverAppV1.RunExecTx, response, *pTx.rawTxV1, pTx.sender, tp.transaction.ID())
 				tp.execTxs.PushBack(execTx)
 			} else if pTx.rawTxV2 != nil {
