@@ -58,9 +58,6 @@ func NewBCChainApplication(config common.Config, logger log.Loggerf) *BCChainApp
 		logger:      logger,
 	}
 
-	app.txPool = txpool.NewTxPool(runtime.NumCPU(), logger)
-	app.txExecutor = txexecutor.NewTxExecutor(app.txPool, logger)
-
 	softforks.Init() //存疑　bcbtest
 
 	app.connQuery.SetLogger(logger)
@@ -80,7 +77,8 @@ func NewBCChainApplication(config common.Config, logger log.Loggerf) *BCChainApp
 		app.appv1 = appv1.NewBCChainApplication(logger)
 	}
 	logger.Info("Init bcchain end")
-
+	app.txPool = txpool.NewTxPool(runtime.NumCPU(), logger, app.connDeliver)
+	app.txExecutor = txexecutor.NewTxExecutor(app.txPool, logger, app.connDeliver)
 	return &app
 }
 
@@ -237,7 +235,7 @@ func (app *BCChainApplication) InitChain(req types.RequestInitChain) types.Respo
 		res.Code = types2.ErrLogicError
 		res.Log = "invalid genesis doc"
 	}
-
+	app.txPool.SetTransaction(app.connDeliver.TransID())
 	return res
 }
 
@@ -260,6 +258,7 @@ func (app *BCChainApplication) BeginBlock(req types.RequestBeginBlock) types.Res
 		panic("invalid chain version in state")
 	}
 
+	app.txPool.SetTransaction(app.connDeliver.TransID())
 	return res
 }
 
