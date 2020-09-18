@@ -140,7 +140,7 @@ func parseTxV2(chainID, txStr string) (
 	tx2.Init(chainID)
 	txV2, pubKey, err = tx2.TxParse(txStr)
 	if err != nil {
-		panic(err)
+		panic(err) //eof
 	}
 
 	if len(txV2.Note) > types2.MaxSizeNote {
