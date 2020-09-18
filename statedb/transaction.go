@@ -2,10 +2,10 @@ package statedb
 
 import (
 	"bytes"
-	"sort"
-
 	"fmt"
 	"github.com/bcbchain/bclib/jsoniter"
+	"sort"
+	"sync"
 	"sync/atomic"
 )
 
@@ -17,10 +17,11 @@ type Transaction struct {
 	committable    bool
 	maxTxCount     int
 	goRoutineCount int
-	wBuffer        map[string][]byte
-	wBitsMerged    *conflictBits
-	rBuffer        *kvBuffer
-	lastTxID       int64
+	//wBuffer        map[string][]byte
+	wBuffer     *sync.Map
+	wBitsMerged *conflictBits
+	rBuffer     *kvBuffer
+	lastTxID    int64
 }
 
 func (trans *Transaction) ID() int64 {
@@ -30,8 +31,10 @@ func (trans *Transaction) ID() int64 {
 func (trans *Transaction) NewTx(f TxFunction, response interface{}, params ...interface{}) (tx *Tx) {
 	tx = &Tx{
 		txID:    trans.calcTxID(),
-		wBuffer: make(map[string][]byte),
-		rBuffer: make(map[string][]byte),
+		wBuffer: new(sync.Map),
+		rBuffer: new(sync.Map),
+		//wBuffer: make(map[string][]byte),
+		//rBuffer: make(map[string][]byte),
 		//wBits:       newConflictBits(trans.maxTxCount * 256),
 		//rBits:       newConflictBits(trans.maxTxCount * 256),
 		wBits:       newConflictBits(maxTxCount * 256),
@@ -50,27 +53,39 @@ func (trans *Transaction) calcTxID() int64 {
 
 func (trans *Transaction) Get(key string) []byte {
 	var err error
-	value := make([]byte, 0)
+	//value := make([]byte, 0)
 	ok := false
-	if value, ok = trans.wBuffer[key]; !ok {
+	//if value, ok = trans.wBuffer[key]; !ok {
+	// if value, ok = trans.rBuffer.get(key); !ok {
+	//    value, err = trans.stateDB.sdb.Get([]byte(key))
+	//    if err != nil {
+	//       panic(err)
+	//    }
+	//    trans.rBuffer.set(key, value)
+	// }
+	//}
+	var value interface{}
+	if value, ok = trans.wBuffer.Load(key); !ok {
 		if value, ok = trans.rBuffer.get(key); !ok {
 			value, err = trans.stateDB.sdb.Get([]byte(key))
 			if err != nil {
 				panic(err)
 			}
-			trans.rBuffer.set(key, value)
+			trans.rBuffer.set(key, value.([]byte))
 		}
 	}
-	return value
+	return value.([]byte)
 }
 
 func (trans *Transaction) Set(key string, value []byte) {
-	trans.wBuffer[key] = value
+	trans.wBuffer.Store(key, value)
+	//trans.wBuffer[key] = value
 }
 
 func (trans *Transaction) BatchSet(data map[string][]byte) {
 	for k, v := range data {
-		trans.wBuffer[k] = v
+		trans.wBuffer.Store(k, v)
+		//trans.wBuffer[k] = v
 	}
 }
 
@@ -99,15 +114,15 @@ func run_tx(tx *Tx) {
 
 func (trans *Transaction) exec(txs []*Tx) []*Tx {
 	subtxs := make([]*Tx, 0)
-	go_num := 0
+	goNum := 0
 	for _, tx := range txs {
 		subtxs = append(subtxs, tx)
-		go_num++
-		if go_num >= trans.goRoutineCount {
+		goNum++
+		if goNum >= trans.goRoutineCount {
 			break
 		}
 	}
-	if go_num == 0 {
+	if goNum == 0 {
 		return nil
 	}
 
@@ -116,7 +131,7 @@ func (trans *Transaction) exec(txs []*Tx) []*Tx {
 		subtxs = trans._exec(subtxs)
 	}
 
-	return append(make([]*Tx, 0), txs[go_num:]...)
+	return append(make([]*Tx, 0), txs[goNum:]...)
 }
 
 func (trans *Transaction) _exec(txs []*Tx) []*Tx {
@@ -186,27 +201,58 @@ func (trans *Transaction) Commit() {
 	trans.checkID()
 
 	batch := trans.stateDB.sdb.NewBatch()
-	originData := make(map[string][]byte, len(trans.wBuffer))
+	//originData := make(map[string][]byte, len(trans.wBuffer))
+	var lenTranswbuffer int
+	trans.wBuffer.Range(func(key, value interface{}) bool {
+		if key != nil {
+			lenTranswbuffer++
+		}
+		return true
+	})
+	originData := make(map[string][]byte, lenTranswbuffer)
+	//
+	//for k, v := range trans.wBuffer {
+	//
+	// // get origin data
+	// if value, err := trans.stateDB.sdb.Get([]byte(k)); err != nil {
+	//    panic(err)
+	// } else {
+	//    originData[k] = value
+	// }
+	//
+	// // set new data to state db
+	// if len(v) == 0 {
+	//    batch.Delete([]byte(k))
+	// } else {
+	//    batch.Set([]byte(k), v)
+	// }
+	//}
 
-	for k, v := range trans.wBuffer {
-
+	trans.wBuffer.Range(func(k, v interface{}) bool {
 		// get origin data
-		if value, err := trans.stateDB.sdb.Get([]byte(k)); err != nil {
+		if value, err := trans.stateDB.sdb.Get([]byte(k.(string))); err != nil {
 			panic(err)
 		} else {
-			originData[k] = value
+			originData[k.(string)] = value
 		}
 
 		// set new data to state db
-		if len(v) == 0 {
-			batch.Delete([]byte(k))
+		if len(v.([]byte)) == 0 {
+			batch.Delete([]byte(k.(string)))
 		} else {
-			batch.Set([]byte(k), v)
+			batch.Set([]byte(k.(string)), v.([]byte))
 		}
-	}
+		return true
+	})
 
 	// snapshot
-	trans.stateDB.snapshot.commit(trans.transactionID, originData, trans.wBuffer)
+	//trans.stateDB.snapshot.commit(trans.transactionID, originData, trans.wBuffer)
+	var wBuffer = make(map[string][]byte, lenTranswbuffer)
+	trans.wBuffer.Range(func(key, value interface{}) bool {
+		wBuffer[key.(string)] = value.([]byte)
+		return true
+	})
+	trans.stateDB.snapshot.commit(trans.transactionID, originData, wBuffer)
 
 	// set last transaction ID
 	value, err := jsoniter.Marshal(trans.transactionID)
@@ -226,7 +272,8 @@ func (trans *Transaction) Commit() {
 }
 
 func (trans *Transaction) Rollback() {
-	trans.wBuffer = make(map[string][]byte)
+	//trans.wBuffer = make(map[string][]byte)
+	trans.wBuffer = new(sync.Map)
 	trans.rBuffer = newKVbuffer(trans.rBuffer.maxCacheSize)
 
 	if trans.committable {
@@ -236,16 +283,21 @@ func (trans *Transaction) Rollback() {
 
 func (trans *Transaction) GetBuffer() []byte {
 	var keys []string
-	for k := range trans.wBuffer {
-		keys = append(keys, k)
-	}
+	//for k := range trans.wBuffer {
+	// keys = append(keys, k)
+	//}
+	trans.wBuffer.Range(func(k, v interface{}) bool {
+		keys = append(keys, k.(string))
+		return true
+	})
 	sort.Strings(keys)
 
 	var buf bytes.Buffer
 	for _, k := range keys {
-		v := trans.wBuffer[k]
+		//v := trans.wBuffer[k]
+		v, _ := trans.wBuffer.Load(k)
 		buf.Write([]byte(k))
-		buf.Write(v)
+		buf.Write(v.([]byte))
 	}
 	return buf.Bytes()
 }

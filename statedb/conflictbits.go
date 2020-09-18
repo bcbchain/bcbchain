@@ -21,8 +21,8 @@ func newConflictBits(size int) *conflictBits {
 	}
 }
 
-func (bits *conflictBits) ensure_memory() {
-	if bits.bits1 == nil {
+func (bits *conflictBits) ensureMemory() {
+	if bits.bits1 == nil || bits.bits2 == nil || bits.bits3 == nil {
 		bits.bits1 = make([]uint64, bits.length)
 		bits.bits2 = make([]uint64, bits.length)
 		bits.bits3 = make([]uint64, bits.length)
@@ -79,7 +79,7 @@ func (bits *conflictBits) String3() string {
 }
 
 func (bits *conflictBits) Set(key []byte) {
-	bits.ensure_memory()
+	bits.ensureMemory()
 
 	bits.set1(bits.calcIndex1(key))
 	bits.set2(bits.calcIndex2(key))
@@ -127,7 +127,7 @@ func (bits *conflictBits) set3(index uint) {
 }
 
 func (bits *conflictBits) IsConflictTo(c *conflictBits) bool {
-	bits.ensure_memory()
+	bits.ensureMemory()
 
 	c1 := false
 	c2 := false
@@ -155,9 +155,9 @@ func (bits *conflictBits) IsConflictTo(c *conflictBits) bool {
 
 func (bits *conflictBits) Merge(c *conflictBits) (m *conflictBits) {
 	m = newConflictBits(int(bits.bitCount))
-	m.ensure_memory()
-	c.ensure_memory()
-	bits.ensure_memory()
+	m.ensureMemory()
+	c.ensureMemory()
+	bits.ensureMemory()
 
 	for i := uint(0); i < bits.length; i++ {
 		m.bits1[i] = bits.bits1[i] | c.bits1[i]

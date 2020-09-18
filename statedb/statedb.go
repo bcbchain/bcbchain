@@ -3,6 +3,8 @@ package statedb
 import (
 	"github.com/bcbchain/bclib/bcdb"
 	"github.com/bcbchain/bclib/jsoniter"
+	"runtime"
+	"sync"
 	"sync/atomic"
 )
 
@@ -81,10 +83,12 @@ func (s *StateDB) NewCommittableTransaction(maxTxCount int) *Transaction {
 		transactionID: s.calcTransactionID(true),
 		stateDB:       s,
 		maxTxCount:    maxTxCount,
-		wBuffer:       make(map[string][]byte),
-		rBuffer:       newKVbuffer(uint(1024 * 256)),
-		wBitsMerged:   newConflictBits(1024 * 256),
-		committable:   true,
+		//wBuffer:        make(map[string][]byte),
+		wBuffer:        new(sync.Map),
+		goRoutineCount: runtime.NumCPU() * 2,
+		rBuffer:        newKVbuffer(uint(2000 * 256)),
+		wBitsMerged:    newConflictBits(2000 * 256),
+		committable:    true,
 	}
 	s.committableTransaction = trans
 	return trans
@@ -95,9 +99,11 @@ func (s *StateDB) NewRollbackTransaction() *Transaction {
 	return &Transaction{
 		transactionID: s.calcTransactionID(false),
 		stateDB:       s,
-		wBuffer:       make(map[string][]byte),
-		rBuffer:       newKVbuffer(uint(1024 * 256)), // TODO
-		committable:   false,
+		//wBuffer:       make(map[string][]byte),
+		wBuffer:        new(sync.Map),
+		rBuffer:        newKVbuffer(uint(1024 * 256)), // TODO
+		committable:    false,
+		goRoutineCount: runtime.NumCPU() * 2,
 	}
 }
 
