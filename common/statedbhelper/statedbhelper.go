@@ -27,19 +27,17 @@ var (
 
 type Trans struct {
 	Transaction *statedb.Transaction
-	TxMap       map[int64]*statedb.Tx // txID => *statedb2.Tx
+	TxMap       *sync.Map
+	//TxMap       map[int64]*statedb.Tx // txID => *statedb2.Tx
+
 }
+
+//func Init(sdbName string, maxSnapshotCount int) {
+//	stateDB = statedb.New(sdbName, maxSnapshotCount)
+//}
 
 func Init(sdbName string, maxSnapshotCount int) {
 	stateDB = statedb.New(sdbName, maxSnapshotCount)
-}
-
-func InitX(sdb *statedb.StateDB, transMap map[int64]*Trans) {
-	stateDB = sdb
-	transactionMap = sync.Map{}
-	for id, tran := range transMap {
-		transactionMap.Store(id, tran)
-	}
 }
 
 //NewCommittableTransactionID create a committable transaction and return ID
@@ -52,7 +50,8 @@ func NewCommittableTransactionID() (int64, *statedb.Transaction) {
 	currentCommittableTransaction = transaction
 	transactionMap.Store(transaction.ID(), &Trans{
 		Transaction: transaction,
-		TxMap:       make(map[int64]*statedb.Tx),
+		TxMap:       new(sync.Map),
+		//TxMap:       make(map[int64]*statedb.Tx),
 	})
 
 	return transaction.ID(), transaction
@@ -63,7 +62,8 @@ func NewRollbackTransactionID() (int64, *statedb.Transaction) {
 	transaction := stateDB.NewRollbackTransaction()
 	transactionMap.Store(transaction.ID(), &Trans{
 		Transaction: transaction,
-		TxMap:       make(map[int64]*statedb.Tx),
+		TxMap:       new(sync.Map),
+		//TxMap:       make(map[int64]*statedb.Tx),
 	})
 	return transaction.ID(), transaction
 }
@@ -84,8 +84,22 @@ func NewTx(transID int64) int64 {
 	trans := temp.(*Trans)
 
 	tx := trans.Transaction.NewTx(nil, nil)
-	trans.TxMap[tx.ID()] = tx
+	trans.TxMap.Store(tx.ID(), tx)
+	//trans.TxMap[tx.ID()] = tx
 	return tx.ID()
+}
+
+func NewTxConcurrency(transID int64, f statedb.TxFunction, response interface{}, params ...interface{}) *statedb.Tx {
+	temp, ok := transactionMap.Load(transID)
+	if !ok {
+		panic("invalid transID")
+	}
+	trans := temp.(*Trans)
+
+	tx := trans.Transaction.NewTx(f, response, params...)
+	trans.TxMap.Store(tx.ID(), tx)
+	//trans.TxMap[tx.ID()] = tx
+	return tx
 }
 
 func Get(transID, txID int64, key string) ([]byte, error) {
@@ -390,8 +404,12 @@ func RollbackBlock(transID int64) {
 //RollbackTx rollback tx changes
 func RollbackTx(transID, txID int64) {
 	trans := getTrans(transID)
-	tx := trans.TxMap[txID]
-	tx.Rollback()
+	tx, ok := trans.TxMap.Load(txID)
+	if ok == false {
+		panic("RollbackTx failed")
+	}
+	//tx := trans.TxMap[txID]
+	tx.(*statedb.Tx).Rollback()
 }
 
 //CommitBlock commit block changes
@@ -406,8 +424,13 @@ func CommitBlock(transID int64) {
 //CommitTx commit tx changes
 func CommitTx(transID, txID int64) ([]byte, map[string][]byte) {
 	trans := getTrans(transID)
-	tx := trans.TxMap[txID]
-	return tx.Commit()
+	tx, ok := trans.TxMap.Load(txID)
+	if ok == false {
+		panic("CommitTx failed")
+	}
+	//tx := trans.TxMap[txID]
+	//return tx.Commit()
+	return tx.(*statedb.Tx).Commit()
 }
 
 //CommitTx2V2 commit tx changes
@@ -876,9 +899,11 @@ func get(transID, txID int64, key string) []byte {
 	}
 	trans := temp.(*Trans)
 
-	tx, ok := trans.TxMap[txID]
-	if ok {
-		value := tx.Get(key)
+	//tx, ok := trans.TxMap[txID]
+	tx, ok2 := trans.TxMap.Load(txID)
+	if ok2 {
+		//value := tx.Get(key)
+		value := tx.(*statedb.Tx).Get(key)
 		if len(value) != 0 {
 			return value
 		}
@@ -895,12 +920,14 @@ func set(transID, txID int64, key string, value []byte) {
 	}
 	trans := temp.(*Trans)
 
-	var tx *statedb.Tx
-	tx, ok = trans.TxMap[txID]
-	if !ok {
+	//var tx *statedb.Tx
+	//tx, ok = trans.TxMap[txID]
+	tx, ok2 := trans.TxMap.Load(txID)
+	if !ok2 {
 		panic(fmt.Sprintf("invalid txID: %d", txID))
 	}
-	tx.Set(key, value)
+	//tx.Set(key, value)
+	tx.(*statedb.Tx).Set(key, value)
 }
 
 func batchSet(transID, txID int64, data map[string][]byte) {
@@ -910,12 +937,14 @@ func batchSet(transID, txID int64, data map[string][]byte) {
 	}
 	trans := temp.(*Trans)
 
-	var tx *statedb.Tx
-	tx, ok = trans.TxMap[txID]
-	if !ok {
+	//var tx *statedb.Tx
+	//tx, ok = trans.TxMap[txID]
+	tx, ok2 := trans.TxMap.Load(txID)
+	if !ok2 {
 		panic(fmt.Sprintf("invalid txID: %d", txID))
 	}
-	tx.BatchSet(data)
+	//tx.BatchSet(data)
+	tx.(*statedb.Tx).BatchSet(data)
 }
 
 func GoBatchExec(transID int64, txs []*statedb.Tx) {
