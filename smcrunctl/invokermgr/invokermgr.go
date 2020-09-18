@@ -38,8 +38,8 @@ type TxID2ContractAddrMap struct {
 
 // InvokerMgr - class of invoke manager
 type InvokerMgr struct {
-	logger log.Logger
-
+	logger                log.Logger
+	mutex                 *sync.Mutex
 	standardMethods       map[uint32]struct{}
 	transMap              sync.Map // map[transID]map[txID]urls
 	dockerUrlMap          sync.Map // map[transID]map[url]struct{}
@@ -67,6 +67,7 @@ func GetInstance() *InvokerMgr {
 func (im *InvokerMgr) Init(log log.Logger) {
 	initOnce.Do(func() {
 		im.logger = log
+		im.mutex = new(sync.Mutex)
 		im.standardMethods = map[uint32]struct{}{
 			0x44D8CA60: {}, // prototype: Transfer(types.Address,bn.Number)
 			0x6B7E4ED5: {}, // prototype: AddSupply(bn.Number)
@@ -696,9 +697,9 @@ func (im *InvokerMgr) setValToTransMap(transID, txID int64, url []string) {
 	} else {
 		m = v.(*TxID2UrlMap)
 	}
-
+	im.mutex.Lock()
 	m.Map[txID] = append(m.Map[txID], url...)
-
+	im.mutex.Unlock()
 	im.transMap.Store(transID, m)
 }
 
@@ -710,9 +711,9 @@ func (im *InvokerMgr) setValToTransCon(transID, txID int64, addrs []string) {
 	} else {
 		m = v.(*TxID2ContractAddrMap)
 	}
-
+	im.mutex.Lock()
 	m.Map[txID] = append(m.Map[txID], addrs...)
-
+	im.mutex.Unlock()
 	im.transIDToContractAddr.Store(transID, m)
 }
 
@@ -724,9 +725,9 @@ func (im *InvokerMgr) setValDockerMap(transID int64, url string) {
 	} else {
 		m = v.(*UrlMap)
 	}
-
+	im.mutex.Lock()
 	m.Map[url] = struct{}{}
-
+	im.mutex.Unlock()
 	im.dockerUrlMap.Store(transID, m)
 }
 
