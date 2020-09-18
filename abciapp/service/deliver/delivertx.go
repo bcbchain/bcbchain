@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/bcbchain/bcbchain/abciapp/softforks"
 	"github.com/bcbchain/bcbchain/common/statedbhelper"
@@ -739,6 +740,7 @@ func combineBuffer(nonceBuffer, txBuffer map[string][]byte) map[string][]byte {
 }
 
 func (app *AppDeliver) RunExecTx(tx *statedb.Tx, params ...interface{}) (doneSuccess bool, response interface{}) {
+	time4 := time.Now()
 	doneSuccess = true
 	txHash := params[0].(common.HexBytes)
 	transaction := params[1].(types2.Transaction)
@@ -746,13 +748,13 @@ func (app *AppDeliver) RunExecTx(tx *statedb.Tx, params ...interface{}) (doneSuc
 	pubKey := params[3].(crypto.PubKeyEd25519)
 
 	adp := adapter.GetInstance()
-	invokeRes := adp.InvokeTx(app.blockHeader, app.transID, app.txID, sender, transaction, pubKey.Bytes(), txHash, app.blockHash)
+	invokeRes := adp.InvokeTx(app.blockHeader, app.transID, tx.ID(), sender, transaction, pubKey.Bytes(), txHash, app.blockHash)
 	app.logger.Debug("docker invoke response.....", "response", response)
 	if invokeRes.Code != types2.CodeOK {
 		app.logger.Error("docker invoke error.....", "error", invokeRes.Log)
 		app.logger.Debug("docker invoke error.....", "response", invokeRes.String())
-		statedbhelper.RollbackTx(app.transID, app.txID)
-		adp.RollbackTx(app.transID, app.txID)
+		statedbhelper.RollbackTx(app.transID, tx.ID())
+		adp.RollbackTx(app.transID, tx.ID())
 	}
 
 	response = new(types.ResponseDeliverTx)
@@ -767,15 +769,18 @@ func (app *AppDeliver) RunExecTx(tx *statedb.Tx, params ...interface{}) (doneSuc
 	resDeliverTx.Height = invokeRes.Height
 	resDeliverTx.TxHash = txHash
 
+	app.logger.Debug("测试结果", "v2版本执行RunExecTx的时间", time.Now().Sub(time4))
 	return true, resDeliverTx
 }
 
 func (app *AppDeliver) HandleResponse(txStr string, rawTxV2 *types2.Transaction, response *types.ResponseDeliverTx) (resDeliverTx types.ResponseDeliverTx) {
-
+	time6 := time.Now()
 	resDeliverTx = *response
 
+	time7 := time.Now()
 	//emit new summary fee  and transferFee receipts
 	tags, _ := app.emitFeeReceipts(*rawTxV2, response.Tags, true)
+	app.logger.Debug("测试结果", "单笔交易的emitFeeReceipts花费时间", time.Now().Sub(time7))
 	resDeliverTx.Tags = tags
 
 	var stateTx []byte
@@ -802,13 +807,15 @@ func (app *AppDeliver) HandleResponse(txStr string, rawTxV2 *types2.Transaction,
 			stateTx, _ = statedbhelper.CommitTx(app.transID, app.txID)
 		}
 	}
+	time8 := time.Now()
 	app.calcDeliverHash([]byte(txStr), &resDeliverTx, stateTx)
-
+	app.logger.Debug("测试结果", "单笔交易的calcDeliverHash时间", time.Now().Sub(time8))
 	//calculate Fee
 	app.fee = app.fee + int64(response.Fee)
 	app.logger.Debug("deliverBCTx()", "app.fee", app.fee, "app.rewards", map2String(app.rewards))
 
 	app.logger.Debug("end deliver invoke.....")
 
+	app.logger.Debug("测试结果", "单笔交易HandleResponse所花费的时间", time.Now().Sub(time6))
 	return resDeliverTx
 }
