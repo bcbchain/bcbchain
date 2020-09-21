@@ -740,12 +740,14 @@ func combineBuffer(nonceBuffer, txBuffer map[string][]byte) map[string][]byte {
 }
 
 func (app *AppDeliver) RunExecTx(tx *statedb.Tx, params ...interface{}) (doneSuccess bool, response interface{}) {
+
 	time4 := time.Now()
 	doneSuccess = true
 	txHash := params[0].(common.HexBytes)
 	transaction := params[1].(types2.Transaction)
 	sender := params[2].(types2.Address)
 	pubKey := params[3].(crypto.PubKeyEd25519)
+	app.logger.Info("Recv ABCI interface: DeliverTx", "tx", tx.ID(), "txHash", txHash.String())
 
 	adp := adapter.GetInstance()
 	invokeRes := adp.InvokeTx(app.blockHeader, app.transID, tx.ID(), sender, transaction, pubKey.Bytes(), txHash, app.blockHash)

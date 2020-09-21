@@ -390,6 +390,15 @@ func BeginBlock(transID int64) {
 	SetWorldAppState(transID, NewTx(transID), state)
 }
 
+func BeginBlockEx(transID int64) *abci.AppState {
+	state := GetWorldAppState(transID, 0)
+
+	state.BlockHeight = state.BlockHeight + 1
+	SetWorldAppState(transID, NewTx(transID), state)
+
+	return state
+}
+
 //RollbackBlock rollback block changes
 func RollbackBlock(transID int64) {
 	trans := getTrans(transID)

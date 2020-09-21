@@ -199,6 +199,7 @@ func (app *AppCheck) runCheckBCTx(tx []byte, transaction types2.Transaction, pub
 			Code: types2.ErrCheckTx,
 			Log:  "Invalid transaction note"}
 	}
+
 	transID, _ := statedbhelper.NewRollbackTransactionID() //???
 	txID := int64(1)
 	// Check Nonce
@@ -210,12 +211,13 @@ func (app *AppCheck) runCheckBCTx(tx []byte, transaction types2.Transaction, pub
 			Log:  "Invalid nonce"}
 	}
 
-	statedbhelper.BeginBlock(transID)
+	appStat := statedbhelper.BeginBlockEx(transID)
 	defer statedbhelper.RollbackBlock(transID)
 
 	adp := adapter.GetInstance()
 	defer adp.Rollback(transID)
-	appStat := statedbhelper.GetWorldAppState(0, 0)
+	//defer adp.Rollback(transID)
+	//appStat := statedbhelper.GetWorldAppState(0, 0)
 
 	blockHeader := types.Header{}
 	if appStat.BlockHeight == 0 {

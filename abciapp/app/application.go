@@ -73,15 +73,16 @@ func NewBCChainApplication(config common.Config, logger log.Loggerf) *BCChainApp
 	adapterIns.Init(logger, 32333)
 	adapter.SetSdbCallback(statedbhelper.AdapterGetCallBack, statedbhelper.AdapterSetCallBack, builderhelper.AdapterBuildCallBack)
 
+	app.txPool = txpool.NewTxPool(runtime.NumCPU(), logger, app.connDeliver)
+	app.txExecutor = txexecutor.NewTxExecutor(app.txPool, logger, app.connDeliver)
+
 	if checkGenesisChainVersion() == 0 {
 		app.appv1 = appv1.NewBCChainApplication(logger)
+
 		app.txPool.SetdeliverAppV1(app.appv1.GetConnDeliver())
 		app.txExecutor.SetdeliverAppV1(app.appv1.GetConnDeliver())
 	}
 	logger.Info("Init bcchain end")
-
-	app.txPool = txpool.NewTxPool(runtime.NumCPU(), logger, app.connDeliver)
-	app.txExecutor = txexecutor.NewTxExecutor(app.txPool, logger, app.connDeliver)
 	return &app
 }
 
