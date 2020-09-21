@@ -274,7 +274,7 @@ func (trans *Transaction) Commit() {
 func (trans *Transaction) Rollback() {
 	//trans.wBuffer = make(map[string][]byte)
 	trans.wBuffer = new(sync.Map)
-	trans.rBuffer = newKVbuffer(trans.rBuffer.maxCacheSize)
+	//trans.rBuffer = newKVbuffer(trans.rBuffer.maxCacheSize)
 
 	if trans.committable {
 		trans.stateDB.committableTransaction = nil

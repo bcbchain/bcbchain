@@ -86,7 +86,7 @@ func (s *StateDB) NewCommittableTransaction(maxTxCount int) *Transaction {
 		//wBuffer:        make(map[string][]byte),
 		wBuffer:        new(sync.Map),
 		goRoutineCount: runtime.NumCPU() * 2,
-		rBuffer:        newKVbuffer(uint(2000 * 256)),
+		rBuffer:        newKVbuffer(uint(64 * 256)),
 		wBitsMerged:    newConflictBits(2000 * 256),
 		committable:    true,
 	}
@@ -101,7 +101,7 @@ func (s *StateDB) NewRollbackTransaction() *Transaction {
 		stateDB:       s,
 		//wBuffer:       make(map[string][]byte),
 		wBuffer:        new(sync.Map),
-		rBuffer:        newKVbuffer(uint(1024 * 256)), // TODO
+		rBuffer:        newKVbuffer(uint(1 * 100)), // TODO
 		committable:    false,
 		goRoutineCount: runtime.NumCPU() * 2,
 	}
