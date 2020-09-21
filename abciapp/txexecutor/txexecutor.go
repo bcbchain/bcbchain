@@ -9,7 +9,6 @@ import (
 	"github.com/bcbchain/bcbchain/statedb"
 	"github.com/bcbchain/bclib/tendermint/abci/types"
 	"github.com/bcbchain/bclib/tendermint/tmlibs/log"
-	"runtime"
 	"sync"
 	"time"
 )
@@ -39,7 +38,7 @@ var _ TxExecutor = (*txExecutor)(nil)
 func NewTxExecutor(tp txpool.TxPool, l log.Logger, deliverAppV2 *deliverV2.AppDeliver) TxExecutor {
 	te := &txExecutor{
 		txPool:             tp,
-		maxRoutineNum:      runtime.NumCPU(),
+		maxRoutineNum:      64,
 		logger:             l,
 		deliverAppV2:       deliverAppV2,
 		responsesChan:      make(chan []types.ResponseDeliverTx),

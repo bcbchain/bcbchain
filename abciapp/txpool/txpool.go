@@ -40,7 +40,7 @@ type txPool struct {
 	getExecTxChan chan []*statedb.Tx //接收transaction中的所有tx
 	executeTxs    []*statedb.Tx      //存储所有构造好后的tx
 
-	bitmap map[uint8]uint8 //表示有多少批交易，每一批有多少笔交易；0=>有多少批交易
+	bitmap map[uint8]int //表示有多少批交易，每一批有多少笔交易；0=>有多少批交易
 
 	createdExecTxChan chan struct{} // 生成可执行交易通知
 	leftNum           int           // 剩余未执行交易数量,已经解析了的交易
@@ -71,6 +71,7 @@ func NewTxPool(maxParseRoutineNum int, l log.Logger, deliverAppV2 *deliverV2.App
 
 		getExecTxChan: make(chan []*statedb.Tx),
 	}
+	tp.cpuNum = 64
 
 	go tp.parseDeliverTxsRoutine(maxParseRoutineNum)
 	go tp.createExecTxRoutine()
@@ -123,19 +124,19 @@ func (tp *txPool) parseDeliverTxsRoutine(maxParseRoutineNum int) {
 
 			tp.deliverTxsNum = len(deliverTxs)
 			//tp.leftNum = tp.deliverTxsNum
-			if tp.deliverTxsNum%64 != 0 {
-				tp.bitmap = make(map[uint8]uint8, (tp.deliverTxsNum/64)+2)
-				tp.bitmap[0] = uint8((tp.deliverTxsNum / 64) + 1) //0=>有多少批交易
-				for i := 1; i < (tp.deliverTxsNum/64)+1; i++ {
-					tp.bitmap[uint8(i)] = 64
+			if tp.deliverTxsNum%tp.cpuNum != 0 {
+				tp.bitmap = make(map[uint8]int, (tp.deliverTxsNum/tp.cpuNum)+2)
+				tp.bitmap[0] = (tp.deliverTxsNum / tp.cpuNum) + 1 //0=>有多少批交易
+				for i := 1; i < (tp.deliverTxsNum/tp.cpuNum)+1; i++ {
+					tp.bitmap[uint8(i)] = tp.cpuNum
 				}
-				tp.bitmap[uint8(tp.deliverTxsNum/64)+1] = uint8(tp.deliverTxsNum % 64)
+				tp.bitmap[uint8(tp.deliverTxsNum/tp.cpuNum)+1] = tp.deliverTxsNum % tp.cpuNum
 
 			} else {
-				tp.bitmap = make(map[uint8]uint8, (tp.deliverTxsNum/64)+1)
-				tp.bitmap[0] = uint8(tp.deliverTxsNum / 64) //0=>有多少批交易
-				for i := 1; i <= tp.deliverTxsNum/64; i++ {
-					tp.bitmap[uint8(i)] = 64
+				tp.bitmap = make(map[uint8]int, (tp.deliverTxsNum/tp.cpuNum)+1)
+				tp.bitmap[0] = tp.deliverTxsNum / tp.cpuNum //0=>有多少批交易
+				for i := 1; i <= tp.deliverTxsNum/tp.cpuNum; i++ {
+					tp.bitmap[uint8(i)] = tp.cpuNum
 				}
 			}
 
@@ -220,7 +221,7 @@ func (tp *txPool) _createExecTxRoutine(pTx *ParseTx) {
 		//execTx := tp.transaction.NewTx(tp.deliverAppV1.RunExecTx, response, *pTx.rawTxV1, pTx.sender, tp.transaction.ID())
 		execTx := statedbhelper.NewTxConcurrency(tp.transaction.ID(), tp.deliverAppV1.RunExecTx, response, *pTx.rawTxV1, pTx.sender, tp.transaction.ID())
 		tp.executeTxs[pTx.txOrder] = execTx
-		tp.bitmap[uint8(pTx.txOrder/64)+1]-- //表示该交易已经解析完成
+		tp.bitmap[uint8(pTx.txOrder/tp.cpuNum)+1]-- //表示该交易已经解析完成
 	} else if pTx.rawTxV2 != nil {
 		var response interface{}
 		err := statedbhelper.SetAccountNonceEx(pTx.sender, pTx.rawTxV2.Nonce)
@@ -234,7 +235,7 @@ func (tp *txPool) _createExecTxRoutine(pTx *ParseTx) {
 		//execTx := tp.transaction.NewTx(tp.deliverAppV2.RunExecTx, response, pTx.txHash, *pTx.rawTxV2, pTx.sender, pTx.pubKey)
 		execTx := statedbhelper.NewTxConcurrency(tp.transaction.ID(), tp.deliverAppV2.RunExecTx, response, pTx.txHash, *pTx.rawTxV2, pTx.sender, pTx.pubKey)
 		tp.executeTxs[pTx.txOrder] = execTx
-		tp.bitmap[uint8(pTx.txOrder/64)+1]--
+		tp.bitmap[uint8(pTx.txOrder/tp.cpuNum)+1]--
 		tp.logger.Debug("测试结果", "该交易的txorder", pTx.txOrder, "该交易的txID", execTx.ID())
 
 	} else {
@@ -243,11 +244,11 @@ func (tp *txPool) _createExecTxRoutine(pTx *ParseTx) {
 
 	//进行判断是否一批次交易中已全部到齐
 	//然后发送给txExecutor执行
-	if tp.bitmap[uint8(pTx.txOrder/64)+1] == 0 {
-		if uint8(pTx.txOrder/64)+1 == tp.bitmap[0] { //最后一批
-			tp.getExecTxChan <- tp.executeTxs[(pTx.txOrder/64)*64 : (pTx.txOrder/64)*64+(tp.deliverTxsNum%64)]
+	if tp.bitmap[uint8(pTx.txOrder/tp.cpuNum)+1] == 0 {
+		if pTx.txOrder/tp.cpuNum+1 == tp.bitmap[0] && tp.deliverTxsNum%tp.cpuNum != 0 { //最后一批
+			tp.getExecTxChan <- tp.executeTxs[(pTx.txOrder/tp.cpuNum)*tp.cpuNum : (pTx.txOrder/tp.cpuNum)*tp.cpuNum+(tp.deliverTxsNum%tp.cpuNum)]
 		} else {
-			tp.getExecTxChan <- tp.executeTxs[(pTx.txOrder/64)*64 : (pTx.txOrder/64)*64+64]
+			tp.getExecTxChan <- tp.executeTxs[(pTx.txOrder/tp.cpuNum)*tp.cpuNum : (pTx.txOrder/tp.cpuNum)*tp.cpuNum+tp.cpuNum]
 		}
 
 	}
