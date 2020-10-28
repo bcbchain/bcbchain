@@ -21,4 +21,5 @@ require (
 
 replace (
 	github.com/bcbchain/bclib v0.0.0-20200604101126-5bd6cff2be45 => ../bclib
+	github.com/bcbchain/sdk v0.0.0-20200601024849-70dea4da7a40 => ../sdk
 )

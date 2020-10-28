@@ -200,7 +200,7 @@ func (app *AppCheck) runCheckBCTx(tx []byte, transaction types2.Transaction, pub
 			Log:  "Invalid transaction note"}
 	}
 
-	transID, _ := statedbhelper.NewRollbackTransactionID() //???
+	transID, _ := statedbhelper.NewRollbackTransactionID()
 	txID := int64(1)
 	// Check Nonce
 	err := statedbhelper.CheckAccountNonce(transID, txID, pubKey.Address(statedbhelper.GetChainID()), transaction.Nonce)

@@ -35,29 +35,29 @@ type Result2 struct {
 //
 //import "github.com/bcbchain/bclib/tendermint/abci/types"
 //
-//type TxPool struct {
+//type txPool struct {
 //	maxCurrency    int
 //	beginBlockInfo types.RequestBeginBlock
 //	txChan         chan []byte
 //}
 //
-//func NewTxPool() *TxPool {
-//	return &TxPool{txChan: make(chan []byte, 1000)}
+//func NewTxPool() *txPool {
+//	return &txPool{txChan: make(chan []byte, 1000)}
 //}
 //
 //// SetBeginBlockInfo 向交易池中写入beginblock信息
-//func (T *TxPool) SetBeginBlockInfo(beginBlockInfo types.RequestBeginBlock) {
+//func (T *txPool) SetBeginBlockInfo(beginBlockInfo types.RequestBeginBlock) {
 //	T.beginBlockInfo = beginBlockInfo
 //}
 //
 //// PutRawTx 向交易池中写入交易
-//func (T *TxPool) PutTx(tx []byte) {
+//func (T *txPool) PutTx(tx []byte) {
 //	//将交易写入交易池的通道中
 //	T.txChan <- tx
 //}
 //
 //// GetTx 从交易池中读出交易
-//func (T *TxPool) GetTxs() [][]byte {
+//func (T *txPool) GetTxs() [][]byte {
 //	var txs = make([][]byte, T.maxCurrency)
 //	select {
 //	case tx := <-T.txChan:

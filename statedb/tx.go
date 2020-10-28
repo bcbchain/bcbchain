@@ -10,11 +10,9 @@ import (
 type TxFunction func(tx *Tx, params ...interface{}) (bool, interface{})
 
 type Tx struct {
-	txID int64
-	//wBuffer map[string][]byte
-	//rBuffer map[string][]byte
-	wBuffer *sync.Map
-	rBuffer *sync.Map
+	txID    int64
+	wBuffer map[string][]byte
+	rBuffer map[string][]byte
 	wBits   *conflictBits
 	rBits   *conflictBits
 
@@ -27,8 +25,8 @@ type Tx struct {
 
 	transaction *Transaction
 
-	exportBuffer1 []byte
-	exportBuffer2 map[string][]byte
+	export_buffer1 []byte
+	export_buffer2 map[string][]byte
 
 	response interface{}
 }
@@ -42,42 +40,30 @@ func (tx *Tx) Transaction() *Transaction {
 }
 
 func (tx *Tx) Get(key string) []byte {
-	//value := make([]byte, 0)
-	//ok := false
-	//if value, ok = tx.wBuffer[key]; !ok {
-	// if value, ok = tx.rBuffer[key]; !ok {
-	//    value = tx.transaction.Get(key)
-	//    tx.rBuffer[key] = value
-	//    tx.rBits.Set([]byte(key))
-	// }
-	//}
-	var value interface{}
+	value := make([]byte, 0)
 	ok := false
-	if value, ok = tx.wBuffer.Load(key); !ok {
-		if value, ok = tx.rBuffer.Load(key); !ok {
+	if value, ok = tx.wBuffer[key]; !ok {
+		if value, ok = tx.rBuffer[key]; !ok {
 			value = tx.transaction.Get(key)
-			tx.rBuffer.Store(key, value.([]byte))
+			tx.rBuffer[key] = value
 			tx.rBits.Set([]byte(key))
 		}
 	}
-
-	return value.([]byte)
+	return value
 }
 
 func (tx *Tx) Set(key string, value []byte) {
-	//tx.wBuffer[key] = value
-	tx.wBuffer.Store(key, value)
+	tx.wBuffer[key] = value
 	tx.wBits.Set([]byte(key))
 }
 
 func (tx *Tx) GetBuffer() ([]byte, map[string][]byte) {
-	return tx.exportBuffer1, tx.exportBuffer2
+	return tx.export_buffer1, tx.export_buffer2
 }
 
 func (tx *Tx) BatchSet(data map[string][]byte) {
 	for key, val := range data {
-		//tx.wBuffer[key] = val
-		tx.wBuffer.Store(key, val)
+		tx.wBuffer[key] = val
 		tx.wBits.Set([]byte(key))
 	}
 }
@@ -105,51 +91,36 @@ func (tx *Tx) exec() {
 
 func (tx *Tx) commit() {
 	// commit to transaction
-	var wBuffer = make(map[string][]byte, 0)
-
-	tx.wBuffer.Range(func(key, value interface{}) bool {
-		wBuffer[key.(string)] = value.([]byte)
-		return true
-	})
-	//tx.transaction.BatchSet(tx.wBuffer)
-	tx.transaction.BatchSet(wBuffer)
+	tx.transaction.BatchSet(tx.wBuffer)
 
 	var keys []string
-	//for k, _ := range tx.wBuffer {
-	// keys = append(keys, k)
-	//}
-	tx.wBuffer.Range(func(key, value interface{}) bool {
-		keys = append(keys, key.(string))
-		return true
-	})
+	for k, _ := range tx.wBuffer {
+		keys = append(keys, k)
+	}
 	sort.Strings(keys)
 
 	var buf bytes.Buffer
 	for _, k := range keys {
-		//v := tx.wBuffer[k]
-		v, _ := tx.wBuffer.Load(k)
+		v := tx.wBuffer[k]
 		buf.Write([]byte(k))
-		buf.Write(v.([]byte))
+		buf.Write(v)
 	}
 
-	tx.exportBuffer1 = buf.Bytes()
-	//tx.exportBuffer2 = tx.wBuffer
-	tx.exportBuffer2 = wBuffer
+	tx.export_buffer1 = buf.Bytes()
+	tx.export_buffer2 = tx.wBuffer
 	tx.reset()
 }
 
 func (tx *Tx) reset() {
-	//tx.wBuffer = make(map[string][]byte)
-	//tx.rBuffer = make(map[string][]byte)
-	tx.wBuffer = new(sync.Map)
-	tx.rBuffer = new(sync.Map)
+	tx.wBuffer = make(map[string][]byte)
+	tx.rBuffer = make(map[string][]byte)
 	tx.wBits.Clear()
 	tx.rBits.Clear()
 }
 
 func (tx *Tx) Commit() ([]byte, map[string][]byte) {
 	tx.commit()
-	return tx.exportBuffer1, tx.exportBuffer2
+	return tx.export_buffer1, tx.export_buffer2
 }
 
 func (tx *Tx) Rollback() {

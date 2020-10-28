@@ -41,10 +41,10 @@ type InvokerMgr struct {
 	logger                log.Logger
 	mutex                 *sync.Mutex
 	standardMethods       map[uint32]struct{}
-	transMap              sync.Map // map[transID]map[txID]urls
-	dockerUrlMap          sync.Map // map[transID]map[url]struct{}
+	transMap              sync.Map // map[transID]map[txID]urls =>  map[transID][txID]urls
+	dockerUrlMap          sync.Map // map[transID]map[url]struct{} => map[transID][]urls
 	dockerMapConnPool     sync.Map // map[url]*socket.ConnectionPool
-	transIDToContractAddr sync.Map // map[transID]map[txID][]types.Address
+	transIDToContractAddr sync.Map // map[transID]map[txID][]types.Address => map[transID][txID]types.Address
 	contractBuffer        sync.Map // map[contractAddr_methodID]gas/map[contract]acctAddr/map[contractToken]token
 }
 
@@ -152,7 +152,6 @@ func (im *InvokerMgr) InvokeTx(
 			result.Log = e.Error()
 			return
 		}
-
 		url, result, err = im.invoke(blockHeader, transId, txId, tx.GasLimit-gasUsed, sender, payer, tx, message, result.Tags, pubKey, txHash, blockHash)
 
 		// 无论失败与成功，均将收据和Fee等数据返回给调用者
@@ -288,7 +287,9 @@ func (im *InvokerMgr) invoke(
 	if message.Contract == std.GetGenesisContractAddr(statedbhelper.GetChainID()) {
 		timeout = 300
 	}
+
 	resp, err := cli.Call("Invoke", map[string]interface{}{"blockHeader": blockHeader, "transID": transId, "txID": txId, "callParam": invokeParam}, timeout)
+
 	if err != nil {
 		im.logger.Info("Client call error: " + err.Error())
 		// 之前有在失败时再重试一次，现在改为失败了直接 panic
@@ -743,7 +744,7 @@ func (im *InvokerMgr) getPayer(height int64, sender types.Address, tx types.Tran
 	// load contract buffer
 	// tx.Messages should have a example
 	contracts := make([]*std.Contract, 0)
-	for _, msg := range tx.Messages { //tx的编码
+	for _, msg := range tx.Messages {
 		contractSplit := strings.Split(msg.Contract, ".")
 		contractAddr := msg.Contract
 		if len(contractSplit) == 2 {
@@ -791,4 +792,83 @@ func (im *InvokerMgr) loadContractInfo(height int64, contractAddr types.Address,
 	}
 
 	return contract, nil
+}
+
+func makeTransferCallParams(
+	tx types.Transaction,
+	sender, payer types.Address,
+	pubKey types.PubKey,
+	blockHeader types2.Header,
+	txHash types.Hash) map[string]interface{} {
+
+	callParams := make(map[string]interface{})
+	msgs := make(map[string]interface{})
+	txs := make(map[string]interface{})
+
+	msgs["contract"] = tx.Messages[0].Contract
+	msgs["items"] = tx.Messages[0].Items
+	msgs["methodID"] = tx.Messages[0].MethodID
+
+	txs["gasLimit"] = tx.GasLimit
+	txs["messages"] = tx.Messages
+	txs["nonce"] = tx.Nonce
+	txs["note"] = tx.Note
+
+	callParams["blockHash"] = blockHeader.DataHash
+	callParams["gasleft"] = 100000
+	callParams["message"] = msgs
+	callParams["payer"] = payer
+	callParams["sender"] = sender
+	callParams["senderPublicKey"] = pubKey.String()
+	callParams["to"] = ""
+	callParams["tx"] = txs
+	callParams["txHash"] = txHash
+	callParams["receipts"] = nil
+
+	return callParams
+}
+
+func makeBlockHeader(Header types2.Header) map[string]interface{} {
+	blockHeader := make(map[string]interface{})
+
+	blockHeader["chain_id"] = Header.ChainID
+	blockHeader["height"] = Header.Height
+	blockHeader["time"] = Header.Time
+	blockHeader["num_txs"] = Header.NumTxs
+	blockHeader["last_block_id"] = Header.LastBlockID //BlockID
+	blockHeader["last_commit_hash"] = Header.LastCommitHash
+	blockHeader["data_hash"] = Header.DataHash
+	blockHeader["validators_hash"] = Header.ValidatorsHash
+	blockHeader["last_app_hash"] = Header.LastAppHash
+	blockHeader["last_fee"] = Header.LastFee
+	blockHeader["last_allocation"] = Header.LastAllocation
+	blockHeader["proposer_address"] = Header.ProposerAddress
+	blockHeader["reward_address"] = Header.RewardAddress
+	blockHeader["random_of_block"] = Header.RandomeOfBlock
+	blockHeader["last_mining"] = Header.LastMining
+	blockHeader["version"] = Header.Version
+	blockHeader["chain_version"] = Header.ChainVersion
+	blockHeader["last_queue_chains"] = Header.LastQueueChains
+	blockHeader["relayer"] = Header.Relayer
+	blockHeader["block_version"] = Header.BlockVersion
+
+	return blockHeader
+}
+
+func makeTransferReq(
+	transId, txId int64,
+	tx types.Transaction,
+	sender, payer types.Address,
+	pubKey types.PubKey,
+	blockHeader types2.Header,
+	txHash types.Hash) (req map[string]interface{}) {
+
+	req = make(map[string]interface{})
+
+	req["transID"] = float64(transId)
+	req["txID"] = float64(txId)
+	req["callParam"] = makeTransferCallParams(tx, sender, payer, pubKey, blockHeader, txHash)
+	req["blockHeader"] = makeBlockHeader(blockHeader)
+
+	return
 }

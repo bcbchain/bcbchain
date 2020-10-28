@@ -78,17 +78,16 @@ func (s *StateDB) NewCommittableTransaction(maxTxCount int) *Transaction {
 	if s.committableTransaction != nil {
 		panic("must commit last transaction")
 	}
-
 	trans := &Transaction{
 		transactionID: s.calcTransactionID(true),
 		stateDB:       s,
 		maxTxCount:    maxTxCount,
 		//wBuffer:        make(map[string][]byte),
 		wBuffer:        new(sync.Map),
-		goRoutineCount: runtime.NumCPU() * 2,
 		rBuffer:        newKVbuffer(uint(64 * 256)),
 		wBitsMerged:    newConflictBits(2000 * 256),
 		committable:    true,
+		goRoutineCount: runtime.NumCPU() - 4,
 	}
 	s.committableTransaction = trans
 	return trans
@@ -99,11 +98,11 @@ func (s *StateDB) NewRollbackTransaction() *Transaction {
 	return &Transaction{
 		transactionID: s.calcTransactionID(false),
 		stateDB:       s,
-		//wBuffer:       make(map[string][]byte),
+		//wBuffer:        make(map[string][]byte),
 		wBuffer:        new(sync.Map),
-		rBuffer:        newKVbuffer(uint(1 * 100)), // TODO
+		rBuffer:        newKVbuffer(uint(1 * 256)), // TODO
 		committable:    false,
-		goRoutineCount: runtime.NumCPU() * 2,
+		goRoutineCount: runtime.NumCPU() - 4,
 	}
 }
 

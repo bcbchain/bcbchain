@@ -30,11 +30,11 @@ func (trans *Transaction) ID() int64 {
 
 func (trans *Transaction) NewTx(f TxFunction, response interface{}, params ...interface{}) (tx *Tx) {
 	tx = &Tx{
-		txID:    trans.calcTxID(),
-		wBuffer: new(sync.Map),
-		rBuffer: new(sync.Map),
-		//wBuffer: make(map[string][]byte),
-		//rBuffer: make(map[string][]byte),
+		txID: trans.calcTxID(),
+		//wBuffer: new(sync.Map),
+		//rBuffer: new(sync.Map),
+		wBuffer: make(map[string][]byte),
+		rBuffer: make(map[string][]byte),
 		//wBits:       newConflictBits(trans.maxTxCount * 256),
 		//rBits:       newConflictBits(trans.maxTxCount * 256),
 		wBits:       newConflictBits(maxTxCount * 256),
@@ -274,7 +274,7 @@ func (trans *Transaction) Commit() {
 func (trans *Transaction) Rollback() {
 	//trans.wBuffer = make(map[string][]byte)
 	trans.wBuffer = new(sync.Map)
-	//trans.rBuffer = newKVbuffer(trans.rBuffer.maxCacheSize)
+	trans.rBuffer = newKVbuffer(trans.rBuffer.maxCacheSize)
 
 	if trans.committable {
 		trans.stateDB.committableTransaction = nil

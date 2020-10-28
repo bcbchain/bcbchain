@@ -20,5 +20,5 @@ const (
 	// Must be a string because scripts like dist.sh read this file.
 	// XXX: Don't change the name of this variable or you will break
 	// automation :)
-	BCBChainSemVer = "2.2.1"
+	BCBChainSemVer = "2.2.2"
 )

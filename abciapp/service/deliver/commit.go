@@ -1,10 +1,10 @@
 package deliver
 
 import (
-	"github.com/bcbchain/bcbchain/common/statedbhelper"
-	"github.com/bcbchain/bcbchain/smcrunctl/adapter"
 	"encoding/binary"
 	"encoding/hex"
+	"github.com/bcbchain/bcbchain/common/statedbhelper"
+	"github.com/bcbchain/bcbchain/smcrunctl/adapter"
 	"sort"
 
 	abci "github.com/bcbchain/bclib/tendermint/abci/types"
@@ -60,6 +60,7 @@ func (app *AppDeliver) commit() abci.ResponseCommit {
 	app.commitBlock()
 	//SDK commit
 	adapter.GetInstance().Commit(app.transID)
+
 	return abci.ResponseCommit{AppState: abci.AppStateToByte(app.appState)}
 }
 

@@ -7,15 +7,10 @@ import (
 	"errors"
 	"fmt"
 	types4 "github.com/bcbchain/bcbchain/abciapp/service/types"
-	"github.com/bcbchain/bcbchain/statedb"
-	"sort"
-	"strconv"
-	"strings"
-	"time"
-
 	"github.com/bcbchain/bcbchain/abciapp/softforks"
 	"github.com/bcbchain/bcbchain/common/statedbhelper"
 	"github.com/bcbchain/bcbchain/smcrunctl/adapter"
+	"github.com/bcbchain/bcbchain/statedb"
 	"github.com/bcbchain/bclib/algorithm"
 	"github.com/bcbchain/bclib/tendermint/abci/types"
 	"github.com/bcbchain/bclib/tendermint/go-crypto"
@@ -28,6 +23,10 @@ import (
 	"github.com/bcbchain/sdk/sdk/jsoniter"
 	"github.com/bcbchain/sdk/sdk/std"
 	types3 "github.com/bcbchain/sdk/sdk/types"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
 )
 
 func (app *AppDeliver) deliverBCTx(tx []byte) (resDeliverTx types.ResponseDeliverTx, txBuffer map[string][]byte) {
@@ -742,7 +741,7 @@ func combineBuffer(nonceBuffer, txBuffer map[string][]byte) map[string][]byte {
 func (app *AppDeliver) RunExecTx(tx *statedb.Tx, params ...interface{}) (doneSuccess bool, response interface{}) {
 
 	time4 := time.Now()
-	doneSuccess = true
+	//doneSuccess = true
 	txHash := params[0].(common.HexBytes)
 	transaction := params[1].(types2.Transaction)
 	sender := params[2].(types2.Address)
@@ -778,11 +777,8 @@ func (app *AppDeliver) RunExecTx(tx *statedb.Tx, params ...interface{}) (doneSuc
 func (app *AppDeliver) HandleResponse(txStr string, rawTxV2 *types2.Transaction, response *types.ResponseDeliverTx) (resDeliverTx types.ResponseDeliverTx) {
 	time6 := time.Now()
 	resDeliverTx = *response
-
-	time7 := time.Now()
 	//emit new summary fee  and transferFee receipts
 	tags, _ := app.emitFeeReceipts(*rawTxV2, response.Tags, true)
-	app.logger.Debug("测试结果", "单笔交易的emitFeeReceipts花费时间", time.Now().Sub(time7))
 	resDeliverTx.Tags = tags
 
 	var stateTx []byte
@@ -809,9 +805,7 @@ func (app *AppDeliver) HandleResponse(txStr string, rawTxV2 *types2.Transaction,
 			stateTx, _ = statedbhelper.CommitTx(app.transID, app.txID)
 		}
 	}
-	time8 := time.Now()
 	app.calcDeliverHash([]byte(txStr), &resDeliverTx, stateTx)
-	app.logger.Debug("测试结果", "单笔交易的calcDeliverHash时间", time.Now().Sub(time8))
 	//calculate Fee
 	app.fee = app.fee + int64(response.Fee)
 	app.logger.Debug("deliverBCTx()", "app.fee", app.fee, "app.rewards", map2String(app.rewards))

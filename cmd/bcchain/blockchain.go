@@ -6,13 +6,12 @@ import (
 	"github.com/bcbchain/bcbchain/abciapp/common"
 	"github.com/bcbchain/bcbchain/smcdocker"
 	"github.com/bcbchain/bcbchain/version"
-	"os"
-	"path/filepath"
-
 	"github.com/bcbchain/bclib/tendermint/abci/server"
 	cmn "github.com/bcbchain/bclib/tendermint/tmlibs/common"
 	tmlog "github.com/bcbchain/bclib/tendermint/tmlibs/log"
 	"github.com/spf13/cobra"
+	"os"
+	"path/filepath"
 )
 
 var (
@@ -126,6 +125,7 @@ func cmdStart(cmd *cobra.Command, args []string) error {
 	home := os.Getenv("HOME")
 	logger = tmlog.NewTMLogger(filepath.Join(home, "log"), "bcchain")
 	logger.AllowLevel(common.GlobalConfig.LogLevel)
+	//logger.AllowLevel("error")
 	logger.SetOutputAsync(common.GlobalConfig.LogAsync)
 	logger.SetOutputToFile(common.GlobalConfig.LogFile)
 	logger.SetOutputToScreen(common.GlobalConfig.LogScreen)

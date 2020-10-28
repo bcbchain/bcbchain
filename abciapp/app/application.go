@@ -57,9 +57,7 @@ func NewBCChainApplication(config common.Config, logger log.Loggerf) *BCChainApp
 		connDeliver: &deliver.AppDeliver{},
 		logger:      logger,
 	}
-
-	softforks.Init() //存疑　bcbtest
-
+	softforks.Init()
 	app.connQuery.SetLogger(logger)
 	app.connCheck.SetLogger(logger)
 	app.connDeliver.SetLogger(logger)
@@ -73,14 +71,14 @@ func NewBCChainApplication(config common.Config, logger log.Loggerf) *BCChainApp
 	adapterIns.Init(logger, 32333)
 	adapter.SetSdbCallback(statedbhelper.AdapterGetCallBack, statedbhelper.AdapterSetCallBack, builderhelper.AdapterBuildCallBack)
 
-	app.txPool = txpool.NewTxPool(runtime.NumCPU(), logger, app.connDeliver)
+	app.txPool = txpool.NewTxPool(runtime.NumCPU()*4, logger, app.connDeliver)
 	app.txExecutor = txexecutor.NewTxExecutor(app.txPool, logger, app.connDeliver)
 
 	if checkGenesisChainVersion() == 0 {
 		app.appv1 = appv1.NewBCChainApplication(logger)
 
 		app.txPool.SetdeliverAppV1(app.appv1.GetConnDeliver())
-		app.txExecutor.SetdeliverAppV1(app.appv1.GetConnDeliver())
+		app.txExecutor.SetDeliverAppV1(app.appv1.GetConnDeliver())
 	}
 	logger.Info("Init bcchain end")
 	return &app
@@ -194,6 +192,16 @@ func (app *BCChainApplication) DeliverTxs(deliverTxs []string) []types.ResponseD
 	return app.txExecutor.GetResponse()
 }
 
+// PutDeliverTxs PutDeliverTxs interface
+func (app *BCChainApplication) PutDeliverTxs(deliverTxs []string) {
+	app.txPool.PutDeliverTxs(deliverTxs)
+}
+
+// GetDeliverTxs GetDeliverTxs interface
+func (app *BCChainApplication) GetDeliverTxsResponses() []types.ResponseDeliverTx {
+	return app.txExecutor.GetResponse()
+}
+
 //Flush flush interface
 func (app *BCChainApplication) Flush(req types.RequestFlush) types.ResponseFlush {
 
@@ -239,8 +247,6 @@ func (app *BCChainApplication) InitChain(req types.RequestInitChain) types.Respo
 		res.Code = types2.ErrLogicError
 		res.Log = "invalid genesis doc"
 	}
-	app.txPool.SetTransaction(app.connDeliver.TransID())
-	app.txExecutor.SetTransaction(app.connDeliver.TransID())
 	return res
 }
 
@@ -286,6 +292,7 @@ func (app *BCChainApplication) EndBlock(req types.RequestEndBlock) types.Respons
 	if app.chainVersion != nil && *app.chainVersion != res.ChainVersion {
 		app.updateChainVersion = res.ChainVersion
 	}
+	app.txExecutor.TENET()
 	return res
 }
 
