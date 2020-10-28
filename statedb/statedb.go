@@ -87,7 +87,7 @@ func (s *StateDB) NewCommittableTransaction(maxTxCount int) *Transaction {
 		rBuffer:        newKVbuffer(uint(64 * 256)),
 		wBitsMerged:    newConflictBits(2000 * 256),
 		committable:    true,
-		goRoutineCount: runtime.NumCPU() - 4,
+		goRoutineCount: (runtime.NumCPU() / 4) * 3,
 	}
 	s.committableTransaction = trans
 	return trans
