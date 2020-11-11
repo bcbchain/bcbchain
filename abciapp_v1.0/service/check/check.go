@@ -184,13 +184,13 @@ func (conn *CheckConnection) CheckTxConcurrency(tx []byte, connV2 *check.AppChec
 	return conn.CheckBCTxV1Concurrency(tx, connV2)
 }
 
-func (conn *CheckConnection) RunCheckTxV1Concurrency(result types.Result, connV2 *check.AppCheck) types.ResponseCheckTx {
-	conn.logger.Debug("Recv ABCI interface: RunCheckTxV1Concurrency", "transaction", result.TxV1Result.Transaction)
-
-	if connV2 == nil {
-		return conn.RunCheckBCTxConcurrency(result)
-	} else {
-		return conn.RunCheckBCTxExConcurrency(result, connV2)
-	}
-
-}
+//func (conn *CheckConnection) RunCheckTxV1Concurrency(result types.Result, connV2 *check.AppCheck) types.ResponseCheckTx {
+//	conn.logger.Debug("Recv ABCI interface: RunCheckTxV1Concurrency", "transaction", result.TxV1Result.Transaction)
+//
+//	if connV2 == nil {
+//		return conn.RunCheckBCTxConcurrency(result)
+//	} else {
+//		return conn.RunCheckBCTxExConcurrency(result, connV2)
+//	}
+//
+//}

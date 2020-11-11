@@ -71,6 +71,9 @@ func (app *AppDeliver) DeliverTxCurrency(tx types2.TxOrder, wg *sync.WaitGroup) 
 	return result
 }
 
+func (app *AppDeliver) SetTxID(txID int64) {
+	app.txID = txID
+}
 func (app *AppDeliver) CleanData() error {
 	return app.cleanData()
 }

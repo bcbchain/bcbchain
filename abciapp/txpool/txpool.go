@@ -8,7 +8,6 @@ import (
 	"github.com/bcbchain/bcbchain/common/statedbhelper"
 	"github.com/bcbchain/bcbchain/statedb"
 	"github.com/bcbchain/bclib/algorithm"
-	types2 "github.com/bcbchain/bclib/tendermint/abci/types"
 	"github.com/bcbchain/bclib/tendermint/go-crypto"
 	"github.com/bcbchain/bclib/tendermint/tmlibs/common"
 	"github.com/bcbchain/bclib/tendermint/tmlibs/log"
@@ -20,65 +19,64 @@ import (
 // 交易池接口
 type TxPool interface {
 	PutDeliverTxs(deliverTxs []string)
-
 	GetTxsExecPending() []*statedb.Tx
 	GetParseTx(index int) *ParseTx
-	//GetParseTx(index int) *statedb.Tx
 	GetDeliverTxNum() int
 	GetConcurrencyNum() int
 	SetTransaction(transactionID int64)
 	SetdeliverAppV1(*deliverV1.DeliverConnection)
-	TENET() //	清空处理该区块时的某些运行数据，为处理新区块作准备
+	TENET() // Clearing some of the data for processing a new block
 }
 
 // 交易池对象
 type txPool struct {
-	deliverTxsChan  chan []string //接收需要deliver的全部txs
-	deliverTxsNum   int           //所有交易的数量
-	batchOrder      int           //表示该批次的顺序
-	deliverTxsOrder int           //用来表示该交易在整个区块中的顺序
+	deliverTxsChan  chan []string // channel ofReceive the txs from the deliver.
+	deliverTxsNum   int           // Number of all txs
+	batchOrder      int           // Indicates the order of the batch
+	deliverTxsOrder int           // Indicates the order of the tx in the entire block
 
-	execTxChan chan *ParseTx //接收构造后的tx，从parseTxs中按顺序
-	parseTxs   []*ParseTx    //存储所有构造好后的tx
+	execTxChan chan *ParseTx // Channels of the received constructed tx, sequentially from parseTxs
+	parseTxs   []*ParseTx    //Store all constructed tx
 
-	getExecTxChan       chan []*statedb.Tx      //接收transaction中的所有tx
-	executeTxs          map[uint8][]*statedb.Tx //按批次存储所有构造好后的tx,有并发访问的问题
-	executeTxsSemaphore *sync.RWMutex           //executeTxs有并发访问的问题，使用信号量来控制访问
+	getExecTxChan     chan []*statedb.Tx      // Receive all tx from transaction
+	executeTxs        map[uint8][]*statedb.Tx // Store all constructed tx by batch.
+	executeTxsRWMutex *sync.RWMutex           // executeTxs has concurrent access issues, uses RWMutex to control access.
 
-	bitmap map[uint8]int //表示有多少批交易，每一批有多少笔交易；0=>有多少批交易
+	// Indicates how many txs are in each batch;
+	// 0 => how many batches of transactions there are
+	bitmap map[uint8]int
 
-	createdExecTxChan chan struct{} // 生成可执行交易通知
+	createdExecTxChan chan struct{} // Generate notifications of executable txs
 
-	logger log.Logger
+	logger log.Logger // log
 
-	transaction  *statedb.Transaction         //每个区块的transaction，但可以改成置存储transactionID
-	deliverAppV1 *deliverV1.DeliverConnection //v1版本的Deliver
-	deliverAppV2 *deliverV2.AppDeliver        //v2版本的Deliver
+	transaction  *statedb.Transaction         // transaction for each block, but can be changed to store the transactionID.
+	deliverAppV1 *deliverV1.DeliverConnection // AppDeliver in v1.
+	deliverAppV2 *deliverV2.AppDeliver        // AppDeliver in v2.
 
-	concurrencyNum int //存储本机cpu数量，调节并发线程数量
+	concurrencyNum int // Store the number of local cpu and adjust the number of concurrent threads.
 
+	chainVersion int
 }
 
 var _ TxPool = (*txPool)(nil)
 
-func NewTxPool(maxParseRoutineNum int, l log.Logger, deliverAppV2 *deliverV2.AppDeliver) TxPool {
-	//maxParseRoutineNum = 128
+// NewTxPool Creating a new txpool
+func NewTxPool(maxRoutineNum int, log log.Logger, deliverAppV2 *deliverV2.AppDeliver) TxPool {
 	tp := &txPool{
-		deliverTxsChan: make(chan []string),
-
-		execTxChan:          make(chan *ParseTx, maxParseRoutineNum),
-		createdExecTxChan:   make(chan struct{}, maxParseRoutineNum),
-		bitmap:              make(map[uint8]int, 32),
-		executeTxs:          make(map[uint8][]*statedb.Tx, 32),
-		executeTxsSemaphore: new(sync.RWMutex),
-		logger:              l,
-		deliverAppV2:        deliverAppV2,
-
-		getExecTxChan: make(chan []*statedb.Tx),
+		deliverTxsChan:    make(chan []string, maxRoutineNum*maxRoutineNum),
+		execTxChan:        make(chan *ParseTx, maxRoutineNum),
+		getExecTxChan:     make(chan []*statedb.Tx, maxRoutineNum),
+		createdExecTxChan: make(chan struct{}, maxRoutineNum),
+		bitmap:            make(map[uint8]int, maxRoutineNum),
+		executeTxs:        make(map[uint8][]*statedb.Tx, maxRoutineNum),
+		executeTxsRWMutex: new(sync.RWMutex),
+		logger:            log,
+		deliverAppV2:      deliverAppV2,
 	}
-	tp.concurrencyNum = runtime.NumCPU() * 8
+	tp.concurrencyNum = runtime.NumCPU()
 
-	go tp.parseDeliverTxsRoutine(maxParseRoutineNum)
+	go tp.parseDeliverTxsRoutine(maxRoutineNum)
 	go tp.createExecTxRoutine()
 
 	return tp
@@ -125,28 +123,41 @@ func (tp *txPool) TENET() {
 	tp.deliverTxsNum = 0
 	tp.deliverTxsOrder = 0
 	tp.batchOrder = 0
-	tp.bitmap = make(map[uint8]int, 32)
-	tp.executeTxs = make(map[uint8][]*statedb.Tx, 32)
+	tp.bitmap = make(map[uint8]int, 0)
+	tp.executeTxs = make(map[uint8][]*statedb.Tx, 0)
 	tp.parseTxs = make([]*ParseTx, 0)
 }
 
-// parseDeliverTxsRoutine 交易解析协程
-func (tp *txPool) parseDeliverTxsRoutine(maxParseRoutineNum int) {
+// parseDeliverTxsRoutine parse of txs
+func (tp *txPool) parseDeliverTxsRoutine(maxRoutineNum int) {
 	for {
 		select {
 		case deliverTxs := <-tp.deliverTxsChan:
-			//收到新的一批交易时，原来的某些存储数据空间不够，为了放置扩容时产生并发读写的问题，加锁限制下
-			tp.executeTxsSemaphore.Lock()
+			/*
+				When a new batch of transactions is received,
+				some of the original storage data space is not enough,
+				in order to prevent the problem of read and write errors,
+				the lock limit is added.
+			*/
+			tp.executeTxsRWMutex.Lock()
 
-			tp.bitmap[0]++                                                             //增加批次数量
-			tp.deliverTxsNum += len(deliverTxs)                                        //增加该批次的交易数，并增加总交易数
-			tp.bitmap[uint8(tp.bitmap[0])] = len(deliverTxs)                           //填写该批次的总交易数量
-			tp.parseTxs = append(tp.parseTxs, make([]*ParseTx, len(deliverTxs))...)    //扩容存储解析交易的切片
-			tp.executeTxs[uint8(tp.batchOrder)] = make([]*statedb.Tx, len(deliverTxs)) //扩容存储构造交易的切片
+			// Increase in the number of batches
+			tp.bitmap[0]++
 
-			tp.executeTxsSemaphore.Unlock()
+			//Increase the number of txs in the batch to the total number of txs
+			tp.deliverTxsNum += len(deliverTxs)
 
-			//使用
+			// Fill in the total number of txs for the batch
+			tp.bitmap[uint8(tp.bitmap[0])] = len(deliverTxs)
+
+			// Slicing of augmented storage parsing txs
+			tp.parseTxs = append(tp.parseTxs, make([]*ParseTx, len(deliverTxs))...)
+
+			// Slices of expanded storage construction transactions
+			tp.executeTxs[uint8(tp.batchOrder)] = make([]*statedb.Tx, len(deliverTxs))
+
+			tp.executeTxsRWMutex.Unlock()
+
 			var mutex = new(sync.Mutex)
 			routineNum := 0
 			wga := NewWaitGroupAnyDone()
@@ -157,9 +168,9 @@ func (tp *txPool) parseDeliverTxsRoutine(maxParseRoutineNum int) {
 				order := tp.deliverTxsOrder
 				tp.deliverTxsOrder++
 				mutex.Unlock()
-				go tp.parseDeliverTxRoutine(deliverTxStr, batchOrder, index, order, mutex, &routineNum, wga) //进行交易解析
+				go tp.parseDeliverTxRoutine(deliverTxStr, batchOrder, index, order, mutex, &routineNum, wga)
 
-				if routineNum >= maxParseRoutineNum { //设置了最大并发数量
+				if routineNum >= maxRoutineNum {
 					wga.Wait()
 				}
 			}
@@ -168,17 +179,19 @@ func (tp *txPool) parseDeliverTxsRoutine(maxParseRoutineNum int) {
 	}
 }
 
-// parseDeliverTxRoutine 交易解析协程
-func (tp *txPool) parseDeliverTxRoutine(deliverTxStr string, batchOrder int, batchTxorder int, order int, mutex *sync.Mutex, routineNum *int, wga *WaitGroupAnyDone) {
-	//todo 修改变量名
-	sender, pubKey, rawTxV1, rawTxV2 := ParseDeliverTx(deliverTxStr) //统一调用接口
+// parseDeliverTxRoutine parse of tx
+func (tp *txPool) parseDeliverTxRoutine(deliverTxStr string, batchOrder int, batchTxorder int, order int,
+	mutex *sync.Mutex, routineNum *int, wga *WaitGroupAnyDone) {
+
+	// Unified Call Interface
+	sender, pubKey, rawTxV1, rawTxV2 := ParseDeliverTx(deliverTxStr)
 
 	ptx := &ParseTx{
-		batchOrder:   batchOrder,
-		batchTxOrder: batchTxorder,
-		txsOrder:     order,
-		txStr:        deliverTxStr,
-		txHash:       common.HexBytes(algorithm.CalcCodeHash(deliverTxStr)),
+		batchOrder:   batchOrder,                                            //批次编号
+		batchTxOrder: batchTxorder,                                          //该交易在本批次的编号
+		txsOrder:     order,                                                 //该交易在本区块的编号
+		txStr:        deliverTxStr,                                          //交易原始字符串
+		txHash:       common.HexBytes(algorithm.CalcCodeHash(deliverTxStr)), //交易hash
 		sender:       sender,
 		pubKey:       pubKey,
 		rawTxV1:      rawTxV1,
@@ -216,32 +229,28 @@ func (tp *txPool) createExecTxRoutine() {
 func (tp *txPool) _createExecTxRoutine(pTx *ParseTx) {
 	if pTx.rawTxV1 != nil {
 		var response interface{}
-		err := statedbhelper.SetAccountNonceEx(pTx.sender, pTx.rawTxV1.Nonce)
+		//err := statedbhelper.SetAccountNonceEx(pTx.sender, pTx.rawTxV1.Nonce)
+		_, err := tp.deliverAppV1.GetStateDB().SetAccountNonce(pTx.sender, pTx.rawTxV1.Nonce) // 设置该账户的nonce值
 		if err != nil {
 			response = stubapi.Response{
 				Code: types.ErrDeliverTx,
 				Log:  "SetAccountNonce failed",
 			}
 		}
-		execTx := statedbhelper.NewTxConcurrency(tp.transaction.ID(), tp.deliverAppV1.RunExecTx, response, *pTx.rawTxV1, pTx.sender, tp.transaction.ID())
-		tp.executeTxsSemaphore.RLock()
+		execTx := statedbhelper.NewTxConcurrency(tp.transaction.ID(), tp.deliverAppV1.RunExecTx, response,
+			*pTx.rawTxV1, pTx.sender, tp.transaction.ID())
+		tp.executeTxsRWMutex.RLock()
 		tp.executeTxs[uint8(pTx.batchOrder)][pTx.batchTxOrder] = execTx
 		tp.bitmap[uint8(pTx.batchOrder)+1]--
-		tp.executeTxsSemaphore.RUnlock()
+		tp.executeTxsRWMutex.RUnlock()
 	} else if pTx.rawTxV2 != nil {
 		var response interface{}
-		err := statedbhelper.SetAccountNonceEx(pTx.sender, pTx.rawTxV2.Nonce)
-		if err != nil {
-			response = types2.ResponseDeliverTx{
-				Code: types.ErrDeliverTx,
-				Log:  "SetAccountNonce failed",
-			}
-		}
-		execTx := statedbhelper.NewTxConcurrency(tp.transaction.ID(), tp.deliverAppV2.RunExecTx, response, pTx.txHash, *pTx.rawTxV2, pTx.sender, pTx.pubKey)
-		tp.executeTxsSemaphore.RLock()
+		execTx := statedbhelper.NewTxConcurrency(tp.transaction.ID(), tp.deliverAppV2.RunExecTx, response,
+			pTx.txHash, *pTx.rawTxV2, pTx.sender, pTx.pubKey, []byte(pTx.txStr))
+		tp.executeTxsRWMutex.RLock()
 		tp.executeTxs[uint8(pTx.batchOrder)][pTx.batchTxOrder] = execTx
 		tp.bitmap[uint8(pTx.batchOrder)+1]--
-		tp.executeTxsSemaphore.RUnlock()
+		tp.executeTxsRWMutex.RUnlock()
 	} else {
 		panic("invalid rawTx version")
 	}

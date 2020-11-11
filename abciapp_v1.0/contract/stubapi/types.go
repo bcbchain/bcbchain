@@ -10,7 +10,7 @@ import (
 
 type Account struct {
 	Addr    smc.Address      // Account address
-	TxState *statedb.TxState // StateDB
+	TxState *statedb.TxState // GetStateDB
 }
 
 type InvokeParams struct {

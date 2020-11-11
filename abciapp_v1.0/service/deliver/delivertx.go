@@ -434,7 +434,7 @@ func map2String(m map[smc.Address]uint64) string {
 
 func (conn *DeliverConnection) RunExecTx(tx *statedb2.Tx, params ...interface{}) (doneSuccess bool, response interface{}) {
 
-	transaction := params[0].(tx1.Transaction)
+	transaction := params[0].(bctx.Transaction)
 	fromAddr := params[1].(smc.Address)
 	transID := params[2].(int64)
 
@@ -446,7 +446,13 @@ func (conn *DeliverConnection) RunExecTx(tx *statedb2.Tx, params ...interface{})
 	var contract *bctypes.Contract
 	if !bFailed {
 		//Generate txState to operate stateDB
-		txState = conn.stateDB.NewTxState(transaction.To, fromAddr)
+		txState = &statedb.TxState{
+			StateDB:         conn.stateDB,
+			ContractAddress: transaction.To,
+			SenderAddress:   fromAddr,
+			Tx:              tx,
+		}
+		//txState = conn.stateDB.NewTxState(transaction.To, fromAddr)
 
 		// Get contract detailed information depends on contract address
 		contract, err = conn.stateDB.GetContract(transaction.To)
@@ -547,6 +553,18 @@ func (conn *DeliverConnection) HandleResponse(
 		conn.RespData = response.Data
 	}
 
+	conn.NameVersion = response.Log
+	if response.Code != bcerrors.ErrCodeOK && response.Code != 0 {
+		resDeliverTx = types.ResponseDeliverTx{
+			Code:     response.Code,
+			Log:      response.Log,
+			GasLimit: rawTxV1.GasLimit,
+			GasUsed:  response.GasUsed,
+			Fee:      response.GasPrice * response.GasUsed,
+		}
+		conn.calcDeliverTxHash([]byte(txStr), &resDeliverTx, nil, connV2)
+		return
+	}
 	resDeliverTx = types.ResponseDeliverTx{
 		Code:     bcerrors.ErrCodeOK,
 		Tags:     response.Tags,
@@ -556,14 +574,10 @@ func (conn *DeliverConnection) HandleResponse(
 		Fee:      response.GasPrice * response.GasUsed,
 		Data:     response.Data,
 	}
-	conn.NameVersion = response.Log
-	if response.Code != bcerrors.ErrCodeOK {
-		conn.calcDeliverTxHash([]byte(txStr), &resDeliverTx, nil, connV2)
-		return
-	}
 
 	conn.logger.Debug("deliverBCTx()", "resDeliverTx length", len(resDeliverTx.String()), "resDeliverTx", resDeliverTx.String())
-	stateTx, _ := statedbhelper.CommitTx(tx.Transaction().ID(), tx.ID())
+	//stateTx, _ := statedbhelper.CommitTx(tx.Transaction().ID(), tx.ID())
+	stateTx, _ := tx.GetBuffer()
 	conn.logger.Debug("deliverBCTx() ", "stateTx length", len(stateTx), "stateTx ", string(stateTx))
 
 	conn.calcDeliverTxHash([]byte(txStr), &resDeliverTx, stateTx, connV2)

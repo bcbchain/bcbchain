@@ -79,10 +79,9 @@ func (s *StateDB) NewCommittableTransaction(maxTxCount int) *Transaction {
 		panic("must commit last transaction")
 	}
 	trans := &Transaction{
-		transactionID: s.calcTransactionID(true),
-		stateDB:       s,
-		maxTxCount:    maxTxCount,
-		//wBuffer:        make(map[string][]byte),
+		transactionID:  s.calcTransactionID(true),
+		stateDB:        s,
+		maxTxCount:     maxTxCount,
 		wBuffer:        new(sync.Map),
 		rBuffer:        newKVbuffer(uint(64 * 256)),
 		wBitsMerged:    newConflictBits(2000 * 256),

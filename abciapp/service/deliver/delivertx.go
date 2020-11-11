@@ -746,8 +746,17 @@ func (app *AppDeliver) RunExecTx(tx *statedb.Tx, params ...interface{}) (doneSuc
 	transaction := params[1].(types2.Transaction)
 	sender := params[2].(types2.Address)
 	pubKey := params[3].(crypto.PubKeyEd25519)
+	txStr := params[4].([]byte)
 	app.logger.Info("Recv ABCI interface: DeliverTx", "tx", tx.ID(), "txHash", txHash.String())
-
+	_, err := statedbhelper.SetAccountNonceEx(sender, transaction.Nonce, tx.ID())
+	if err != nil {
+		response = new(types2.Response)
+		response = types2.Response{
+			Code: types2.ErrDeliverTx,
+			Log:  "SetAccountNonce failed",
+		}
+		return true, app.reportFailure(txStr, types2.ErrDeliverTx, "SetAccountNonce failed")
+	}
 	adp := adapter.GetInstance()
 	invokeRes := adp.InvokeTx(app.blockHeader, app.transID, tx.ID(), sender, transaction, pubKey.Bytes(), txHash, app.blockHash)
 	app.logger.Debug("docker invoke response.....", "response", response)
@@ -758,60 +767,63 @@ func (app *AppDeliver) RunExecTx(tx *statedb.Tx, params ...interface{}) (doneSuc
 		adp.RollbackTx(app.transID, tx.ID())
 	}
 
-	response = new(types.ResponseDeliverTx)
-	resDeliverTx := response.(*types.ResponseDeliverTx)
+	response = new(types2.Response)
+	resDeliverTx := response.(*types2.Response)
 	resDeliverTx.Code = invokeRes.Code
 	resDeliverTx.Log = invokeRes.Log
-	resDeliverTx.GasLimit = uint64(invokeRes.GasLimit)
-	resDeliverTx.GasUsed = uint64(invokeRes.GasUsed)
-	resDeliverTx.Fee = uint64(invokeRes.Fee)
+	resDeliverTx.GasLimit = invokeRes.GasLimit
+	resDeliverTx.GasUsed = invokeRes.GasUsed
+	resDeliverTx.Fee = invokeRes.Fee
 	resDeliverTx.Data = invokeRes.Data
 	resDeliverTx.Tags = invokeRes.Tags
 	resDeliverTx.Height = invokeRes.Height
-	resDeliverTx.TxHash = txHash
+	resDeliverTx.TxHash = invokeRes.TxHash
 
 	app.logger.Debug("测试结果", "v2版本执行RunExecTx的时间", time.Now().Sub(time4))
 	return true, resDeliverTx
 }
 
-func (app *AppDeliver) HandleResponse(txStr string, rawTxV2 *types2.Transaction, response *types.ResponseDeliverTx) (resDeliverTx types.ResponseDeliverTx) {
-	time6 := time.Now()
-	resDeliverTx = *response
-	//emit new summary fee  and transferFee receipts
-	tags, _ := app.emitFeeReceipts(*rawTxV2, response.Tags, true)
-	resDeliverTx.Tags = tags
-
-	var stateTx []byte
-	if resDeliverTx.Code == types2.CodeOK {
-		// pack validators if update validator info
-		if hasUpdateValidatorReceipt(response.Tags) {
-			app.packValidators()
-		}
-
-		// pack side chain genesis info
-		if t, ok := hasSideChainGenesisReceipt(response.Tags); ok {
-			app.packSideChainGenesis(t)
-		}
-
-		resDeliverTxStr := resDeliverTx.String()
-		app.logger.Debug("deliverBCTx()", "resDeliverTx length", len(resDeliverTxStr), "resDeliverTx", resDeliverTxStr) // log value of async instance must be immutable to avoid data race
-
-		stateTx, _ = statedbhelper.CommitTx(app.transID, app.txID)
-		app.logger.Debug("deliverBCTx() ", "stateTx length", len(stateTx), "stateTx ", string(stateTx))
-
-	} else {
-		//commit transactions of fee
-		if len(tags) > 0 {
-			stateTx, _ = statedbhelper.CommitTx(app.transID, app.txID)
-		}
+func (app *AppDeliver) HandleResponse(tx *statedb.Tx, txStr string, rawTxV2 *types2.Transaction, response *types2.Response) (resDeliverTx types.ResponseDeliverTx) {
+	app.txID = tx.ID()
+	if response.Code != types2.CodeOK {
+		var totalFee int64
+		resDeliverTx, _, totalFee = app.reportInvokeFailure([]byte(txStr), *rawTxV2, response)
+		resDeliverTx.Fee = uint64(totalFee)
+		return resDeliverTx
 	}
+
+	// pack validators if update validator info
+	if hasUpdateValidatorReceipt(response.Tags) {
+		app.packValidators()
+	}
+
+	// pack side chain genesis info
+	if t, ok := hasSideChainGenesisReceipt(response.Tags); ok {
+		app.packSideChainGenesis(t)
+	}
+	//emit new summary fee  and transferFee receipts
+	tags, totalFee := app.EmitFeeReceipts(*rawTxV2, response, true)
+
+	resDeliverTx.Code = response.Code
+	resDeliverTx.Log = response.Log
+	resDeliverTx.Tags = tags
+	resDeliverTx.GasLimit = uint64(rawTxV2.GasLimit)
+	resDeliverTx.GasUsed = uint64(response.GasUsed)
+	resDeliverTx.Fee = uint64(totalFee)
+	resDeliverTx.Data = response.Data
+	resDeliverTxStr := resDeliverTx.String()
+	app.logger.Debug("deliverBCTx()", "resDeliverTx length", len(resDeliverTxStr), "resDeliverTx", resDeliverTxStr) // log value of async instance must be immutable to avoid data race
+
+	//stateTx, _ := statedbhelper.CommitTx(app.transID, tx.ID())
+	stateTx, _ := tx.GetBuffer()
+	app.logger.Debug("deliverBCTx() ", "stateTx length", len(stateTx), "stateTx ", string(stateTx))
+
 	app.calcDeliverHash([]byte(txStr), &resDeliverTx, stateTx)
 	//calculate Fee
-	app.fee = app.fee + int64(response.Fee)
+	app.fee = app.fee + response.Fee
 	app.logger.Debug("deliverBCTx()", "app.fee", app.fee, "app.rewards", map2String(app.rewards))
 
 	app.logger.Debug("end deliver invoke.....")
 
-	app.logger.Debug("测试结果", "单笔交易HandleResponse所花费的时间", time.Now().Sub(time6))
 	return resDeliverTx
 }

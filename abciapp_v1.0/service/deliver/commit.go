@@ -52,7 +52,7 @@ func (conn *DeliverConnection) commitTx() abci.ResponseCommit {
 	for k, v := range conn.rewards {
 		uintByte := make([]byte, 8)
 		binary.BigEndian.PutUint64(uintByte, v)
-		kvps = append(kvps, common.KVPair{[]byte(k), uintByte})
+		kvps = append(kvps, common.KVPair{Key: []byte(k), Value: uintByte})
 	}
 
 	conn.appState.TxsHashList = hashListBytes

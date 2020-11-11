@@ -9,7 +9,7 @@ abci: "socket"
 queryDBAddress: "0.0.0.0:46666"
 
 # 日志相关配置
-logLevel:   "info"
+logLevel:   "debug"
 logScreen:  false
 logFile:    true
 logAsync:   true

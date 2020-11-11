@@ -17,11 +17,10 @@ type Transaction struct {
 	committable    bool
 	maxTxCount     int
 	goRoutineCount int
-	//wBuffer        map[string][]byte
-	wBuffer     *sync.Map
-	wBitsMerged *conflictBits
-	rBuffer     *kvBuffer
-	lastTxID    int64
+	wBuffer        *sync.Map
+	wBitsMerged    *conflictBits
+	rBuffer        *kvBuffer
+	lastTxID       int64
 }
 
 func (trans *Transaction) ID() int64 {
@@ -30,13 +29,9 @@ func (trans *Transaction) ID() int64 {
 
 func (trans *Transaction) NewTx(f TxFunction, response interface{}, params ...interface{}) (tx *Tx) {
 	tx = &Tx{
-		txID: trans.calcTxID(),
-		//wBuffer: new(sync.Map),
-		//rBuffer: new(sync.Map),
-		wBuffer: make(map[string][]byte),
-		rBuffer: make(map[string][]byte),
-		//wBits:       newConflictBits(trans.maxTxCount * 256),
-		//rBits:       newConflictBits(trans.maxTxCount * 256),
+		txID:        trans.calcTxID(),
+		wBuffer:     make(map[string][]byte),
+		rBuffer:     make(map[string][]byte),
 		wBits:       newConflictBits(maxTxCount * 256),
 		rBits:       newConflictBits(maxTxCount * 256),
 		txFunc:      f,

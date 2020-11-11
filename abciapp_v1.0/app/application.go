@@ -42,7 +42,7 @@ func NewBCChainApplication(logger log.Loggerf) *BCChainApplication {
 	app.connDeliver.NewStateDB()
 
 	// 启动数据库回调服务
-	smcrunctl.StartServer(app.connDeliver.StateDB(), logger, 32332)
+	smcrunctl.StartServer(app.connDeliver.GetStateDB(), logger, 32332)
 
 	//中途宕机后再次注册合约
 	contractAddrArry, err := statedb.NewStateDB().GetContractAddrList()

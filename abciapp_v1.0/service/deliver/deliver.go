@@ -54,8 +54,12 @@ func (conn *DeliverConnection) NewStateDB() {
 	conn.stateDB = statedb.NewStateDB()
 }
 
-func (conn *DeliverConnection) StateDB() *statedb.StateDB {
+func (conn *DeliverConnection) GetStateDB() *statedb.StateDB {
 	return conn.stateDB
+}
+
+func (conn *DeliverConnection) GetAppState() *abci.AppState {
+	return conn.appState
 }
 
 func (conn *DeliverConnection) InitContractDocker() {

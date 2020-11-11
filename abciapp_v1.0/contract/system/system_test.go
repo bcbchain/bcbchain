@@ -1,6 +1,7 @@
 package system
 
 import (
+	"encoding/hex"
 	"github.com/bcbchain/bcbchain/abciapp_v1.0/bcerrors"
 	"github.com/bcbchain/bcbchain/abciapp_v1.0/contract"
 	"github.com/bcbchain/bcbchain/abciapp_v1.0/contract/stubapi"
@@ -9,9 +10,8 @@ import (
 	"github.com/bcbchain/bcbchain/abciapp_v1.0/statedb"
 	"github.com/bcbchain/bcbchain/common/statedbhelper"
 	"github.com/bcbchain/bclib/bcdb"
-	"encoding/hex"
-	"github.com/pkg/errors"
 	"github.com/bcbchain/bclib/tendermint/abci/types"
+	"github.com/pkg/errors"
 	"testing"
 )
 
@@ -95,7 +95,7 @@ func TestSystem_DeployInternalContract(t *testing.T) {
 			ic.TxState.CommitTx()
 		}
 	}
-	//ic.TxState.StateDB.RollBlock()
+	//ic.TxState.GetStateDB.RollBlock()
 	ic.TxState.StateDB.CommitBlock()
 }
 
@@ -143,7 +143,7 @@ func TestSystem_ForbidInternalContract(t *testing.T) {
 			ic.TxState.CommitTx()
 		}
 	}
-	//ic.TxState.StateDB.RollBlock()
+	//ic.TxState.GetStateDB.RollBlock()
 	ic.TxState.StateDB.CommitBlock()
 }
 

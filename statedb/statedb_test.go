@@ -21,7 +21,7 @@ func (s *MySuite) TestNewStateDB(c *C) {
 	fmt.Println(c.TestName())
 	testSameName(c)                     // 打开两个相同名字的数据库
 	testMaxSnapshotCount(c)             // 测试最大快照数量
-	testLastCommittableTransactionID(c) // 测试 StateDB 中 LastCommittableTransactionID 字段
+	testLastCommittableTransactionID(c) // 测试 GetStateDB 中 LastCommittableTransactionID 字段
 }
 
 func (s *MySuite) TestNewCommittableTransaction(c *C) {

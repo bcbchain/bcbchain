@@ -42,7 +42,8 @@ type BCChainApplication struct {
 	// update current chain version
 	updateChainVersion int64
 
-	txPool     txpool.TxPool
+	txPool txpool.TxPool
+
 	txExecutor txexecutor.TxExecutor
 }
 
@@ -73,7 +74,6 @@ func NewBCChainApplication(config common.Config, logger log.Loggerf) *BCChainApp
 
 	app.txPool = txpool.NewTxPool(runtime.NumCPU()*4, logger, app.connDeliver)
 	app.txExecutor = txexecutor.NewTxExecutor(app.txPool, logger, app.connDeliver)
-
 	if checkGenesisChainVersion() == 0 {
 		app.appv1 = appv1.NewBCChainApplication(logger)
 
@@ -131,7 +131,6 @@ func (app *BCChainApplication) CheckTx(tx []byte) types.ResponseCheckTx {
 				connV2 = app.connCheck
 			}
 			res = app.appv1.CheckTx(tx, connV2)
-			//go
 
 		} else if (splitTx[1] == "v2" || splitTx[1] == "v3") && app.ChainVersion() == 2 {
 			res = app.connCheck.CheckTx(tx)
@@ -188,8 +187,9 @@ func (app *BCChainApplication) DeliverTx(tx []byte) types.ResponseDeliverTx {
 
 // DeliverTxs deliverTxs interface
 func (app *BCChainApplication) DeliverTxs(deliverTxs []string) []types.ResponseDeliverTx {
-	app.txPool.PutDeliverTxs(deliverTxs)
-	return app.txExecutor.GetResponse()
+	//app.txPool.PutDeliverTxs(deliverTxs)
+	//return app.txExecutor.GetResponse()
+	return nil
 }
 
 // PutDeliverTxs PutDeliverTxs interface
@@ -198,7 +198,7 @@ func (app *BCChainApplication) PutDeliverTxs(deliverTxs []string) {
 }
 
 // GetDeliverTxs GetDeliverTxs interface
-func (app *BCChainApplication) GetDeliverTxsResponses() []types.ResponseDeliverTx {
+func (app *BCChainApplication) GetDeliverTxsResponses() *types.ResponseDeliverTx {
 	return app.txExecutor.GetResponse()
 }
 
@@ -257,6 +257,8 @@ func (app *BCChainApplication) BeginBlock(req types.RequestBeginBlock) types.Res
 
 	if app.ChainVersion() == 0 {
 		res = app.appv1.BeginBlock(req)
+		app.txPool.SetTransaction(app.appv1.GetConnDeliver().GetStateDB().Transaction.ID())
+		app.txExecutor.SetTransaction(app.appv1.GetConnDeliver().GetStateDB().Transaction.ID())
 	} else if app.ChainVersion() == 2 {
 		// if chain was upgrade from v1, then invoke appv1 BeginBlockToV2 before v2 BeginBlock
 		if checkGenesisChainVersion() == 0 {
@@ -264,13 +266,12 @@ func (app *BCChainApplication) BeginBlock(req types.RequestBeginBlock) types.Res
 		}
 
 		res, _ = app.connDeliver.BeginBlock(req)
-
+		app.txPool.SetTransaction(app.connDeliver.TransID())
+		app.txExecutor.SetTransaction(app.connDeliver.TransID())
 	} else {
 		panic("invalid chain version in state")
 	}
 
-	app.txPool.SetTransaction(app.connDeliver.TransID())
-	app.txExecutor.SetTransaction(app.connDeliver.TransID())
 	return res
 }
 
@@ -362,7 +363,6 @@ func checkGenesisChainVersion() int {
 	} else if genesisChainVersion == 2 {
 		return 2
 	}
-
 	panic("invalid genesisChainVersion")
 }
 

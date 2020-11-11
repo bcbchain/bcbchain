@@ -25,8 +25,8 @@ type Tx struct {
 
 	transaction *Transaction
 
-	export_buffer1 []byte
-	export_buffer2 map[string][]byte
+	exportBuffer1 []byte
+	exportBuffer2 map[string][]byte
 
 	response interface{}
 }
@@ -58,7 +58,7 @@ func (tx *Tx) Set(key string, value []byte) {
 }
 
 func (tx *Tx) GetBuffer() ([]byte, map[string][]byte) {
-	return tx.export_buffer1, tx.export_buffer2
+	return tx.exportBuffer1, tx.exportBuffer2
 }
 
 func (tx *Tx) BatchSet(data map[string][]byte) {
@@ -105,10 +105,10 @@ func (tx *Tx) commit() {
 		buf.Write([]byte(k))
 		buf.Write(v)
 	}
-
-	tx.export_buffer1 = buf.Bytes()
-	tx.export_buffer2 = tx.wBuffer
+	tx.exportBuffer1 = buf.Bytes()
+	tx.exportBuffer2 = tx.wBuffer
 	tx.reset()
+
 }
 
 func (tx *Tx) reset() {
@@ -120,7 +120,7 @@ func (tx *Tx) reset() {
 
 func (tx *Tx) Commit() ([]byte, map[string][]byte) {
 	tx.commit()
-	return tx.export_buffer1, tx.export_buffer2
+	return tx.exportBuffer1, tx.exportBuffer2
 }
 
 func (tx *Tx) Rollback() {

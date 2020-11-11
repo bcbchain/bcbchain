@@ -20,7 +20,11 @@ const (
 	V2TransferMethodID = 0x44d8ca60
 )
 
-// DeliverParseTx 统一解析交易并做基础校验接口，执行区块时调用
+var (
+	ChainVerison = 0
+)
+
+// DeliverParseTx Uniformly parse txs and do basic checksum interfaces, call when executing blocks
 func ParseDeliverTx(txStr string) (
 	sender string,
 	pubKey crypto.PubKeyEd25519,
@@ -69,7 +73,7 @@ func parseTxV1(chainID, txStr string) (
 	if err = rlp.DecodeBytes(rawTxV1.Data, &methodInfo); err != nil {
 		panic(err)
 	}
-	if methodInfo.MethodID == stubapi.ConvertPrototype2ID(prototype.TbTransfer) {
+	if ChainVerison == 2 && methodInfo.MethodID == stubapi.ConvertPrototype2ID(prototype.TbTransfer) {
 		rawTxV2 = exchangeV1toV2(rawTxV1, methodInfo)
 		rawTxV1 = nil
 	}

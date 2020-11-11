@@ -192,118 +192,119 @@ func (conn *CheckConnection) runCheckBCTx(fromAddr smc.Address, transaction bctx
 		Log:  "Check tx succeed"}
 }
 
-func (conn *CheckConnection) RunCheckBCTxConcurrency(result types.Result) types.ResponseCheckTx {
-
-	// Check note, it must stay within 40 characters limit
-	if len(result.TxV1Result.Transaction.Note) > bctx.MAX_SIZE_NOTE {
-		bcError := bcerrors.BCError{
-			ErrorCode: bcerrors.ErrCodeCheckTxNoteExceedLimit,
-			ErrorDesc: "",
-		}
-		return types.ResponseCheckTx{
-			Code: bcError.ErrorCode,
-			Log:  bcError.Error(),
-		}
-	}
-	// Check Nonce
-	err := conn.stateDB.CheckAccountNonce(smc.Address(result.TxV1Result.FromAddr), result.TxV1Result.Transaction.Nonce)
-	if err != nil {
-		conn.logger.Error("check nonce error:", err)
-		bcError := bcerrors.BCError{
-			ErrorCode: bcerrors.ErrCodeCheckTxInvalidNonce,
-			ErrorDesc: "",
-		}
-		return types.ResponseCheckTx{
-			Code: bcError.ErrorCode,
-			Log:  bcError.Error(),
-		}
-	}
-
-	// Generate a fake BeginBlock as a workaround to
-	// cache balance changes while checking sender's balance for Fee.
-	// Rollback once when checkTx is done
-	_, trans := statedbhelper.NewRollbackTransactionID()
-	conn.stateDB.BeginBlock(trans)
-	defer conn.stateDB.RollBlock()
-
-	txState := conn.stateDB.NewTxState(smc.Address(result.TxV1Result.Transaction.To), smc.Address(result.TxV1Result.FromAddr))
-
-	//根据智能合约地址找到智能合约外部账户地址
-	contract, err := conn.stateDB.GetContract(smc.Address(result.TxV1Result.Transaction.To))
-	if err != nil {
-		conn.logger.Error("failed json.Unmarshal(contractBytes,contract)", "error", err)
-
-		bcError := bcerrors.BCError{
-			ErrorCode: bcerrors.ErrCodeLowLevelError,
-			ErrorDesc: err.Error(),
-		}
-		return types.ResponseCheckTx{
-			Code: bcError.ErrorCode,
-			Log:  bcError.Error(),
-		}
-	}
-	if contract == nil {
-		conn.logger.Error("can't find this contract from DB", "contract address", result.TxV1Result.Transaction.To)
-		bcError := bcerrors.BCError{
-			ErrorCode: bcerrors.ErrCodeCheckTxNoContract,
-			ErrorDesc: "",
-		}
-		return types.ResponseCheckTx{
-			Code: bcError.ErrorCode,
-			Log:  bcError.Error(),
-		}
-	}
-
-	sender := &stubapi.Account{
-		smc.Address(result.TxV1Result.FromAddr),
-		txState,
-	}
-
-	owner := &stubapi.Account{
-		contract.Owner,
-		txState,
-	}
-
-	app, err := conn.stateDB.GetWorldAppState()
-	app.BeginBlock.Header.Height++
-	app.BeginBlock.Header.Time++
-	invokeContext := &stubapi.InvokeContext{
-		sender,
-		owner,
-		txState,
-		nil,
-		app.BeginBlock.Header,
-		nil,
-		nil,
-		result.TxV1Result.Transaction.GasLimit,
-		result.TxV1Result.Transaction.Note,
-	}
-
-	conn.logger.Debug("start invoke.....")
-
-	item := &stubapi.InvokeParams{
-		invokeContext,
-		result.TxV1Result.Transaction.Data,
-	}
-
-	_, bcerr := conn.docker.Invoke(item, 0)
-	if bcerr.ErrorCode != bcerrors.ErrCodeOK {
-		conn.logger.Error("docker invoke failed to check TX",
-			"error code", bcerr.ErrorCode,
-			"error", bcerr.Error())
-
-		return types.ResponseCheckTx{
-			Code: bcerr.ErrorCode,
-			Log:  bcerr.Error(),
-		}
-	}
-
-	conn.logger.Debug("end invoke checkTx contract docker .....")
-
-	return types.ResponseCheckTx{
-		Code: bcerrors.ErrCodeOK,
-		Log:  "Check tx succeed"}
-}
+//
+//func (conn *CheckConnection) RunCheckBCTxConcurrency(result types.Result) types.ResponseCheckTx {
+//
+//	// Check note, it must stay within 40 characters limit
+//	if len(result.TxV1Result.Transaction.Note) > bctx.MAX_SIZE_NOTE {
+//		bcError := bcerrors.BCError{
+//			ErrorCode: bcerrors.ErrCodeCheckTxNoteExceedLimit,
+//			ErrorDesc: "",
+//		}
+//		return types.ResponseCheckTx{
+//			Code: bcError.ErrorCode,
+//			Log:  bcError.Error(),
+//		}
+//	}
+//	// Check Nonce
+//	err := conn.stateDB.CheckAccountNonce(smc.Address(result.TxV1Result.FromAddr), result.TxV1Result.Transaction.Nonce)
+//	if err != nil {
+//		conn.logger.Error("check nonce error:", err)
+//		bcError := bcerrors.BCError{
+//			ErrorCode: bcerrors.ErrCodeCheckTxInvalidNonce,
+//			ErrorDesc: "",
+//		}
+//		return types.ResponseCheckTx{
+//			Code: bcError.ErrorCode,
+//			Log:  bcError.Error(),
+//		}
+//	}
+//
+//	// Generate a fake BeginBlock as a workaround to
+//	// cache balance changes while checking sender's balance for Fee.
+//	// Rollback once when checkTx is done
+//	_, trans := statedbhelper.NewRollbackTransactionID()
+//	conn.stateDB.BeginBlock(trans)
+//	defer conn.stateDB.RollBlock()
+//
+//	txState := conn.stateDB.NewTxState(smc.Address(result.TxV1Result.Transaction.To), smc.Address(result.TxV1Result.FromAddr))
+//
+//	//根据智能合约地址找到智能合约外部账户地址
+//	contract, err := conn.stateDB.GetContract(smc.Address(result.TxV1Result.Transaction.To))
+//	if err != nil {
+//		conn.logger.Error("failed json.Unmarshal(contractBytes,contract)", "error", err)
+//
+//		bcError := bcerrors.BCError{
+//			ErrorCode: bcerrors.ErrCodeLowLevelError,
+//			ErrorDesc: err.Error(),
+//		}
+//		return types.ResponseCheckTx{
+//			Code: bcError.ErrorCode,
+//			Log:  bcError.Error(),
+//		}
+//	}
+//	if contract == nil {
+//		conn.logger.Error("can't find this contract from DB", "contract address", result.TxV1Result.Transaction.To)
+//		bcError := bcerrors.BCError{
+//			ErrorCode: bcerrors.ErrCodeCheckTxNoContract,
+//			ErrorDesc: "",
+//		}
+//		return types.ResponseCheckTx{
+//			Code: bcError.ErrorCode,
+//			Log:  bcError.Error(),
+//		}
+//	}
+//
+//	sender := &stubapi.Account{
+//		smc.Address(result.TxV1Result.FromAddr),
+//		txState,
+//	}
+//
+//	owner := &stubapi.Account{
+//		contract.Owner,
+//		txState,
+//	}
+//
+//	app, err := conn.stateDB.GetWorldAppState()
+//	app.BeginBlock.Header.Height++
+//	app.BeginBlock.Header.Time++
+//	invokeContext := &stubapi.InvokeContext{
+//		sender,
+//		owner,
+//		txState,
+//		nil,
+//		app.BeginBlock.Header,
+//		nil,
+//		nil,
+//		result.TxV1Result.Transaction.GasLimit,
+//		result.TxV1Result.Transaction.Note,
+//	}
+//
+//	conn.logger.Debug("start invoke.....")
+//
+//	item := &stubapi.InvokeParams{
+//		invokeContext,
+//		result.TxV1Result.Transaction.Data,
+//	}
+//
+//	_, bcerr := conn.docker.Invoke(item, 0)
+//	if bcerr.ErrorCode != bcerrors.ErrCodeOK {
+//		conn.logger.Error("docker invoke failed to check TX",
+//			"error code", bcerr.ErrorCode,
+//			"error", bcerr.Error())
+//
+//		return types.ResponseCheckTx{
+//			Code: bcerr.ErrorCode,
+//			Log:  bcerr.Error(),
+//		}
+//	}
+//
+//	conn.logger.Debug("end invoke checkTx contract docker .....")
+//
+//	return types.ResponseCheckTx{
+//		Code: bcerrors.ErrCodeOK,
+//		Log:  "Check tx succeed"}
+//}
 
 func (conn *CheckConnection) runCheckBCTxEx(tx []byte, fromAddr smc.Address, pubKey crypto.PubKeyEd25519, tx1 bctx.Transaction, connV2 *check.AppCheck) types.ResponseCheckTx {
 
@@ -363,63 +364,63 @@ func (conn *CheckConnection) runCheckBCTxEx(tx []byte, fromAddr smc.Address, pub
 	return connV2.RunCheckTx(tx, tx2, pubKey)
 }
 
-func (conn *CheckConnection) RunCheckBCTxExConcurrency(result types.Result, connV2 *check.AppCheck) types.ResponseCheckTx {
-
-	contract, err := conn.stateDB.GetContract(result.TxV1Result.Transaction.To)
-	if err != nil {
-		return types.ResponseCheckTx{
-			Code: bcerrors.ErrCodeLowLevelError,
-			Log:  err.Error(),
-		}
-	}
-
-	if contract == nil {
-		return types.ResponseCheckTx{
-			Code: bcerrors.ErrCodeLowLevelError,
-			Log:  "invalid smcAddress"}
-	}
-
-	// check chainVersion
-	if contract.ChainVersion != 0 {
-		return types.ResponseCheckTx{
-			Code: bcerrors.ErrCodeLowLevelError,
-			Log:  "v1 transaction cannot use other version contract",
-		}
-	}
-
-	// check orgID and name
-	if !(contract.OrgID == statedbhelper.GetGenesisOrgID(0, 0) &&
-		contract.ChainVersion == 0 &&
-		(contract.Name == "token-basic" || strings.HasPrefix(contract.Name, "token-templet-"))) {
-		return conn.runCheckBCTx(result.TxV1Result.FromAddr, bctx.Transaction(result.TxV1Result.Transaction))
-	}
-
-	appState := statedbhelper.GetWorldAppState(0, 0)
-
-	effectContract := statedbhelper.GetEffectContractByName(0, 0, appState.BeginBlock.Header.Height+1, contract.Name, contract.OrgID)
-	if effectContract == nil {
-		return types.ResponseCheckTx{
-			Code: bcerrors.ErrCodeLowLevelError,
-			Log:  "cannot get effectContract",
-		}
-	}
-	msg := types2.Message{
-		Contract: effectContract.Token,
-	}
-	msg.MethodID, msg.Items, err = conn.exMessageParams(result.TxV1Result.Transaction.Data)
-	if err != nil {
-		return conn.runCheckBCTx(result.TxV1Result.FromAddr, bctx.Transaction(result.TxV1Result.Transaction))
-	}
-
-	tx2 := types2.Transaction{
-		Nonce:    result.TxV1Result.Transaction.Nonce,
-		GasLimit: int64(result.TxV1Result.Transaction.GasLimit),
-		Note:     result.TxV1Result.Transaction.Note,
-		Messages: []types2.Message{msg},
-	}
-
-	return connV2.RunCheckTx(result.Tx, tx2, result.TxV1Result.Pubkey)
-}
+//func (conn *CheckConnection) RunCheckBCTxExConcurrency(result types.Result, connV2 *check.AppCheck) types.ResponseCheckTx {
+//
+//	contract, err := conn.stateDB.GetContract(result.TxV1Result.Transaction.To)
+//	if err != nil {
+//		return types.ResponseCheckTx{
+//			Code: bcerrors.ErrCodeLowLevelError,
+//			Log:  err.Error(),
+//		}
+//	}
+//
+//	if contract == nil {
+//		return types.ResponseCheckTx{
+//			Code: bcerrors.ErrCodeLowLevelError,
+//			Log:  "invalid smcAddress"}
+//	}
+//
+//	// check chainVersion
+//	if contract.ChainVersion != 0 {
+//		return types.ResponseCheckTx{
+//			Code: bcerrors.ErrCodeLowLevelError,
+//			Log:  "v1 transaction cannot use other version contract",
+//		}
+//	}
+//
+//	// check orgID and name
+//	if !(contract.OrgID == statedbhelper.GetGenesisOrgID(0, 0) &&
+//		contract.ChainVersion == 0 &&
+//		(contract.Name == "token-basic" || strings.HasPrefix(contract.Name, "token-templet-"))) {
+//		return conn.runCheckBCTx(result.TxV1Result.FromAddr, bctx.Transaction(result.TxV1Result.Transaction))
+//	}
+//
+//	appState := statedbhelper.GetWorldAppState(0, 0)
+//
+//	effectContract := statedbhelper.GetEffectContractByName(0, 0, appState.BeginBlock.Header.Height+1, contract.Name, contract.OrgID)
+//	if effectContract == nil {
+//		return types.ResponseCheckTx{
+//			Code: bcerrors.ErrCodeLowLevelError,
+//			Log:  "cannot get effectContract",
+//		}
+//	}
+//	msg := types2.Message{
+//		Contract: effectContract.Token,
+//	}
+//	msg.MethodID, msg.Items, err = conn.exMessageParams(result.TxV1Result.Transaction.Data)
+//	if err != nil {
+//		return conn.runCheckBCTx(result.TxV1Result.FromAddr, bctx.Transaction(result.TxV1Result.Transaction))
+//	}
+//
+//	tx2 := types2.Transaction{
+//		Nonce:    result.TxV1Result.Transaction.Nonce,
+//		GasLimit: int64(result.TxV1Result.Transaction.GasLimit),
+//		Note:     result.TxV1Result.Transaction.Note,
+//		Messages: []types2.Message{msg},
+//	}
+//
+//	return connV2.RunCheckTx(result.Tx, tx2, result.TxV1Result.Pubkey)
+//}
 
 func (conn *CheckConnection) parseTx(tx []byte) (fromAddr string, pubKey crypto.PubKeyEd25519, transaction bctx.Transaction, resp types.ResponseCheckTx) {
 	resp.Code = bcerrors.ErrCodeOK

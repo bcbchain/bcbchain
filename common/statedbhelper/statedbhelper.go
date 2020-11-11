@@ -334,8 +334,8 @@ func SetAccountNonce(transID, txID int64, exAddress types.Address, nonce uint64)
 	return
 }
 
-func SetAccountNonceEx(exAddress types.Address, nonce uint64) (err error) {
-	_, err = SetAccountNonce(currentCommittableTransaction.ID(), 0, exAddress, nonce)
+func SetAccountNonceEx(exAddress types.Address, nonce uint64, txID int64) (nonceBuffer map[string][]byte, err error) {
+	nonceBuffer, err = SetAccountNonce(currentCommittableTransaction.ID(), txID, exAddress, nonce)
 	return
 }
 
@@ -884,7 +884,7 @@ func GetChainGenesisVersion() int {
 func getTrans(transID int64) *Trans {
 	temp, ok := transactionMap.Load(transID)
 	if !ok {
-		panic("invalid transID")
+		panic(fmt.Sprint("invalid transID=", transID))
 	}
 	trans := temp.(*Trans)
 	return trans
@@ -892,7 +892,7 @@ func getTrans(transID int64) *Trans {
 func GetTransBytransID(transID int64) *Trans {
 	temp, ok := transactionMap.Load(transID)
 	if !ok {
-		panic("invalid transID")
+		panic(fmt.Sprint("invalid transID=", transID))
 	}
 	trans := temp.(*Trans)
 	return trans
@@ -904,7 +904,7 @@ func get(transID, txID int64, key string) []byte {
 			return stateDB.Get(key)
 		}
 
-		panic("invalid transID")
+		panic(fmt.Sprint("invalid transID=", transID))
 	}
 	trans := temp.(*Trans)
 

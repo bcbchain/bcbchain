@@ -9,11 +9,12 @@ import (
 	"github.com/bcbchain/bcbchain/statedb"
 	"github.com/bcbchain/bclib/tendermint/abci/types"
 	"github.com/bcbchain/bclib/tendermint/tmlibs/log"
+	types2 "github.com/bcbchain/bclib/types"
 	"runtime"
 )
 
 type TxExecutor interface {
-	GetResponse() []types.ResponseDeliverTx
+	GetResponse() *types.ResponseDeliverTx
 	SetTransaction(transactionID int64)
 	SetDeliverAppV1(*deliverV1.DeliverConnection)
 
@@ -24,7 +25,7 @@ type txExecutor struct {
 	txPool txpool.TxPool
 	//maxRoutineNum int
 	transaction   *statedb.Transaction
-	responsesChan chan []types.ResponseDeliverTx
+	responsesChan chan types.ResponseDeliverTx
 
 	handleTxsNum int //记录已经处理过的是交易的数量，处理完就可以发送给tendermint
 	logger       log.Logger
@@ -32,7 +33,7 @@ type txExecutor struct {
 	deliverAppV1 *deliverV1.DeliverConnection
 	deliverAppV2 *deliverV2.AppDeliver
 
-	responseDeliverTxs []types.ResponseDeliverTx
+	//responseDeliverTxs []types.ResponseDeliverTx
 }
 
 var _ TxExecutor = (*txExecutor)(nil)
@@ -41,22 +42,22 @@ func NewTxExecutor(tp txpool.TxPool, l log.Logger, deliverAppV2 *deliverV2.AppDe
 	te := &txExecutor{
 		txPool: tp,
 		//maxRoutineNum:      64,
-		logger:             l,
-		deliverAppV2:       deliverAppV2,
-		responsesChan:      make(chan []types.ResponseDeliverTx, runtime.NumCPU()*2),
-		responseDeliverTxs: make([]types.ResponseDeliverTx, 0),
+		logger:        l,
+		deliverAppV2:  deliverAppV2,
+		responsesChan: make(chan types.ResponseDeliverTx, runtime.NumCPU()*2),
+		//responseDeliverTxs: make([]types.ResponseDeliverTx, 0),
 	}
+
 	go te.execRoutine()
 
 	return te
 }
 
 // GetResponse 获取交易执行结果
-func (te *txExecutor) GetResponse() []types.ResponseDeliverTx {
+func (te *txExecutor) GetResponse() *types.ResponseDeliverTx {
 	select {
 	case responses := <-te.responsesChan:
-		te.logger.Error("GetResponse", "the number of response", len(responses))
-		return responses
+		return &responses
 	default:
 		return nil
 	}
@@ -72,30 +73,28 @@ func (te *txExecutor) execRoutine() {
 			parseTx := te.txPool.GetParseTx(te.handleTxsNum)
 			te.handleTxsNum++
 			if parseTx.RawTxV1() != nil {
+				var connV2 *deliverV2.AppDeliver
+				if txpool.ChainVerison == 2 {
+					connV2 = te.deliverAppV2
+				}
 				resDeliverTx := te.deliverAppV1.HandleResponse(
 					execTx,
 					parseTx.TxStr(),
 					parseTx.RawTxV1(),
 					execTx.Response().(stubapi.Response),
-					te.deliverAppV2,
+					connV2,
 				)
-				te.responseDeliverTxs = append(te.responseDeliverTxs, resDeliverTx)
-				te.responsesChan <- te.responseDeliverTxs
-				te.responseDeliverTxs = make([]types.ResponseDeliverTx, 0)
+				te.responsesChan <- resDeliverTx
 			} else if parseTx.RawTxV2() != nil {
 				resDeliverTx := te.deliverAppV2.HandleResponse(
+					execTx,
 					parseTx.TxStr(),
 					parseTx.RawTxV2(),
-					execTx.Response().(*types.ResponseDeliverTx),
+					execTx.Response().(*types2.Response),
 				)
-				te.responseDeliverTxs = append(te.responseDeliverTxs, resDeliverTx)
-				te.responsesChan <- te.responseDeliverTxs
-				te.responseDeliverTxs = make([]types.ResponseDeliverTx, 0)
+				te.responsesChan <- resDeliverTx
 			}
 		}
-		//该批次交易都已经执行结束了，进行传输
-		//te.responsesChan <- te.responseDeliverTxs
-		//te.responseDeliverTxs = make([]types.ResponseDeliverTx, 0)
 
 	}
 }
@@ -109,6 +108,8 @@ func (te *txExecutor) SetDeliverAppV1(deliverAppV1 *deliverV1.DeliverConnection)
 	te.deliverAppV1 = deliverAppV1
 }
 func (te *txExecutor) TENET() {
+	state := statedbhelper.GetWorldAppState(0, 0)
+	txpool.ChainVerison = int(state.ChainVersion)
 	te.handleTxsNum = 0
 	te.txPool.TENET()
 }
