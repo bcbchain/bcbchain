@@ -138,6 +138,11 @@ type Response struct {
 
 	// error message
 	Log string
+
+	// error code
+	ErrCode uint32
+	// error log
+	ErrLog string
 }
 
 type rewardStrategy struct {
