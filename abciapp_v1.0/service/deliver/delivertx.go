@@ -527,8 +527,8 @@ func (conn *DeliverConnection) RunExecTx(tx *statedb2.Tx, params ...interface{})
 	if bcerr.ErrorCode != bcerrors.ErrCodeOK {
 		conn.logger.Error("docker invoke error.....", "error", bcerr.Error())
 		txState.RollbackTx()
-		invokeRes.Code = bcerr.ErrorCode
-		invokeRes.Log = bcerr.Error()
+		invokeRes.ErrCode = bcerr.ErrorCode
+		invokeRes.ErrLog = bcerr.Error()
 	}
 
 	return true, invokeRes
@@ -540,6 +540,29 @@ func (conn *DeliverConnection) HandleResponse(
 	rawTxV1 *bctx.Transaction,
 	response stubapi.Response,
 	connV2 *deliver.AppDeliver) (resDeliverTx types.ResponseDeliverTx) {
+
+	if response.ErrCode != 0 {
+		resDeliverTx = types.ResponseDeliverTx{
+			Code:     response.ErrCode,
+			Log:      response.ErrLog,
+			GasLimit: rawTxV1.GasLimit,
+			GasUsed:  response.GasUsed,
+			Fee:      response.GasPrice * response.GasUsed,
+		}
+		conn.calcDeliverTxHash([]byte(txStr), &resDeliverTx, nil, connV2)
+		return
+	}
+
+	conn.NameVersion = response.Log
+	resDeliverTx = types.ResponseDeliverTx{
+		Code:     bcerrors.ErrCodeOK,
+		Tags:     response.Tags,
+		Log:      "Deliver tx succeed",
+		GasLimit: rawTxV1.GasLimit,
+		GasUsed:  response.GasUsed,
+		Fee:      response.GasPrice * response.GasUsed,
+		Data:     response.Data,
+	}
 
 	if response.Code == stubapi.RESPONSE_CODE_UPDATE_VALIDATORS {
 		conn.udValidator = true
@@ -553,31 +576,10 @@ func (conn *DeliverConnection) HandleResponse(
 		conn.RespData = response.Data
 	}
 
-	conn.NameVersion = response.Log
-	if response.Code != bcerrors.ErrCodeOK && response.Code != 0 {
-		resDeliverTx = types.ResponseDeliverTx{
-			Code:     response.Code,
-			Log:      response.Log,
-			GasLimit: rawTxV1.GasLimit,
-			GasUsed:  response.GasUsed,
-			Fee:      response.GasPrice * response.GasUsed,
-		}
-		conn.calcDeliverTxHash([]byte(txStr), &resDeliverTx, nil, connV2)
-		return
-	}
-	resDeliverTx = types.ResponseDeliverTx{
-		Code:     bcerrors.ErrCodeOK,
-		Tags:     response.Tags,
-		Log:      "Deliver tx succeed",
-		GasLimit: rawTxV1.GasLimit,
-		GasUsed:  response.GasUsed,
-		Fee:      response.GasPrice * response.GasUsed,
-		Data:     response.Data,
-	}
-
 	conn.logger.Debug("deliverBCTx()", "resDeliverTx length", len(resDeliverTx.String()), "resDeliverTx", resDeliverTx.String())
-	//stateTx, _ := statedbhelper.CommitTx(tx.Transaction().ID(), tx.ID())
+
 	stateTx, _ := tx.GetBuffer()
+
 	conn.logger.Debug("deliverBCTx() ", "stateTx length", len(stateTx), "stateTx ", string(stateTx))
 
 	conn.calcDeliverTxHash([]byte(txStr), &resDeliverTx, stateTx, connV2)
