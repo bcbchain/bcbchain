@@ -107,7 +107,7 @@ func (tx *Tx) commit() {
 	}
 	tx.exportBuffer1 = buf.Bytes()
 	tx.exportBuffer2 = tx.wBuffer
-	tx.reset()
+	//tx.reset()
 
 }
 

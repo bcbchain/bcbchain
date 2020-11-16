@@ -26,7 +26,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 )
 
 func (app *AppDeliver) deliverBCTx(tx []byte) (resDeliverTx types.ResponseDeliverTx, txBuffer map[string][]byte) {
@@ -46,7 +45,7 @@ func (app *AppDeliver) deliverBCTx(tx []byte) (resDeliverTx types.ResponseDelive
 		transaction, pubKey, err = tx3.TxParse(string(tx))
 		if err != nil {
 			app.logger.Error("tx parse failed:", err)
-			return app.reportFailure(tx, types2.ErrDeliverTx, "tx parse failed"), nil
+			return app.ReportFailure(tx, types2.ErrDeliverTx, "tx parse failed"), nil
 		}
 	}
 	app.logger.Debug("DELIVER.TX", "height", app.blockHeader.Height, "tx", transaction, "pubKey", pubKey, "addr", pubKey.Address(statedbhelper.GetChainID()))
@@ -78,7 +77,7 @@ func (app *AppDeliver) deliverBCTxCurrency(tx []byte) (result types4.Result2) {
 			app.logger.Error("tx parse failed:", err)
 			result.ErrorLog = errors.New("tx parse failed")
 			return result
-			//return app.reportFailure(tx, types2.ErrDeliverTx, "tx parse failed"), nil
+			//return app.ReportFailure(tx, types2.ErrDeliverTx, "tx parse failed"), nil
 		}
 	}
 	app.logger.Debug("DELIVER.TX", "height", app.blockHeader.Height, "tx", transaction, "pubKey", pubKey, "addr", pubKey.Address(statedbhelper.GetChainID()))
@@ -94,14 +93,14 @@ func (app *AppDeliver) runDeliverTx(tx []byte, transaction types2.Transaction, p
 	resDeliverTx.Code = types2.CodeOK
 
 	if len(transaction.Note) > types2.MaxSizeNote {
-		return app.reportFailure(tx, types2.ErrDeliverTx, "tx note is out of range"), nil
+		return app.ReportFailure(tx, types2.ErrDeliverTx, "tx note is out of range"), nil
 	}
 
 	sender := pubKey.Address(statedbhelper.GetChainID())
 	nonceBuffer, err := statedbhelper.SetAccountNonce(app.transID, app.txID, sender, transaction.Nonce)
 	if err != nil {
 		app.logger.Error("SetAccountNonce failed:", err)
-		return app.reportFailure(tx, types2.ErrDeliverTx, "SetAccountNonce failed"), nil
+		return app.ReportFailure(tx, types2.ErrDeliverTx, "SetAccountNonce failed"), nil
 	}
 
 	txHash := common.HexBytes(algorithm.CalcCodeHash(string(tx)))
@@ -196,7 +195,7 @@ func (app *AppDeliver) CalcDeliverHash(tx []byte, response *types.ResponseDelive
 	}
 }
 
-func (app *AppDeliver) reportFailure(tx []byte, errorCode uint32, msg string) (response types.ResponseDeliverTx) {
+func (app *AppDeliver) ReportFailure(tx []byte, errorCode uint32, msg string) (response types.ResponseDeliverTx) {
 	response.Code = errorCode
 	response.Log = msg
 	app.calcDeliverHash(tx, &response, nil)
@@ -740,32 +739,30 @@ func combineBuffer(nonceBuffer, txBuffer map[string][]byte) map[string][]byte {
 
 func (app *AppDeliver) RunExecTx(tx *statedb.Tx, params ...interface{}) (doneSuccess bool, response interface{}) {
 
-	time4 := time.Now()
 	//doneSuccess = true
 	txHash := params[0].(common.HexBytes)
 	transaction := params[1].(types2.Transaction)
 	sender := params[2].(types2.Address)
 	pubKey := params[3].(crypto.PubKeyEd25519)
-	txStr := params[4].([]byte)
+	bcError := params[4].(*types2.BcError)
 	app.logger.Info("Recv ABCI interface: DeliverTx", "tx", tx.ID(), "txHash", txHash.String())
-	_, err := statedbhelper.SetAccountNonceEx(sender, transaction.Nonce, tx.ID())
-	if err != nil {
+	errCode, errLog := bcError.Get()
+	if errCode != 0 || errLog != "" {
 		response = new(types2.Response)
-		response = types2.Response{
-			Code: types2.ErrDeliverTx,
-			Log:  "SetAccountNonce failed",
-		}
-		return true, app.reportFailure(txStr, types2.ErrDeliverTx, "SetAccountNonce failed")
+		resDeliverTx := response.(*types2.Response)
+		resDeliverTx.Code = errCode
+		resDeliverTx.Log = errLog
+		return true, resDeliverTx
 	}
 	adp := adapter.GetInstance()
 	invokeRes := adp.InvokeTx(app.blockHeader, app.transID, tx.ID(), sender, transaction, pubKey.Bytes(), txHash, app.blockHash)
-	app.logger.Debug("docker invoke response.....", "response", response)
 	if invokeRes.Code != types2.CodeOK {
 		app.logger.Error("docker invoke error.....", "error", invokeRes.Log)
 		app.logger.Debug("docker invoke error.....", "response", invokeRes.String())
 		statedbhelper.RollbackTx(app.transID, tx.ID())
 		adp.RollbackTx(app.transID, tx.ID())
 	}
+	app.logger.Debug("docker invoke response.....", "response", invokeRes.String())
 
 	response = new(types2.Response)
 	resDeliverTx := response.(*types2.Response)
@@ -779,12 +776,16 @@ func (app *AppDeliver) RunExecTx(tx *statedb.Tx, params ...interface{}) (doneSuc
 	resDeliverTx.Height = invokeRes.Height
 	resDeliverTx.TxHash = invokeRes.TxHash
 
-	app.logger.Debug("测试结果", "v2版本执行RunExecTx的时间", time.Now().Sub(time4))
 	return true, resDeliverTx
 }
 
 func (app *AppDeliver) HandleResponse(tx *statedb.Tx, txStr string, rawTxV2 *types2.Transaction, response *types2.Response) (resDeliverTx types.ResponseDeliverTx) {
-	app.txID = tx.ID()
+	app.SetTxID(tx.ID())
+	if response.Code == types2.ErrDeliverTx {
+		resDeliverTx.Code = response.Code
+		resDeliverTx.Log = response.Log
+		return resDeliverTx
+	}
 	if response.Code != types2.CodeOK {
 		var totalFee int64
 		resDeliverTx, _, totalFee = app.reportInvokeFailure([]byte(txStr), *rawTxV2, response)
@@ -814,8 +815,8 @@ func (app *AppDeliver) HandleResponse(tx *statedb.Tx, txStr string, rawTxV2 *typ
 	resDeliverTxStr := resDeliverTx.String()
 	app.logger.Debug("deliverBCTx()", "resDeliverTx length", len(resDeliverTxStr), "resDeliverTx", resDeliverTxStr) // log value of async instance must be immutable to avoid data race
 
-	//stateTx, _ := statedbhelper.CommitTx(app.transID, tx.ID())
-	stateTx, _ := tx.GetBuffer()
+	stateTx, _ := statedbhelper.CommitTx(app.transID, tx.ID())
+	//stateTx, _ := tx.GetBuffer()
 	app.logger.Debug("deliverBCTx() ", "stateTx length", len(stateTx), "stateTx ", string(stateTx))
 
 	app.calcDeliverHash([]byte(txStr), &resDeliverTx, stateTx)

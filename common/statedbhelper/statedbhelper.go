@@ -46,7 +46,7 @@ func NewCommittableTransactionID() (int64, *statedb.Transaction) {
 		return currentCommittableTransaction.ID(), currentCommittableTransaction
 	}
 
-	transaction := stateDB.NewCommittableTransaction(2000)
+	transaction := stateDB.NewCommittableTransaction()
 	currentCommittableTransaction = transaction
 	transactionMap.Store(transaction.ID(), &Trans{
 		Transaction: transaction,

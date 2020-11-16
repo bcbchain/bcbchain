@@ -245,8 +245,24 @@ func (tp *txPool) _createExecTxRoutine(pTx *ParseTx) {
 		tp.executeTxsRWMutex.RUnlock()
 	} else if pTx.rawTxV2 != nil {
 		var response interface{}
+		var bcError = &types.BcError{}
 		execTx := statedbhelper.NewTxConcurrency(tp.transaction.ID(), tp.deliverAppV2.RunExecTx, response,
-			pTx.txHash, *pTx.rawTxV2, pTx.sender, pTx.pubKey, []byte(pTx.txStr))
+			pTx.txHash, *pTx.rawTxV2, pTx.sender, pTx.pubKey, bcError)
+
+		//检查该交易的note是否超出最大容量
+		if len(pTx.rawTxV2.Note) > types.MaxSizeNote {
+			res := tp.deliverAppV2.ReportFailure([]byte(pTx.txStr), types.ErrDeliverTx, "tx note is out of range")
+			bcError.Set(res.Code, res.Log)
+		}
+
+		//设置交易发起者账户的nonce值
+		_, err := statedbhelper.SetAccountNonceEx(pTx.sender, pTx.rawTxV2.Nonce, execTx.ID())
+		if err != nil {
+			tp.logger.Error("SetAccountNonce failed:", err)
+			res := tp.deliverAppV2.ReportFailure([]byte(pTx.txStr), types.ErrDeliverTx, "SetAccountNonce failed")
+			bcError.Set(res.Code, res.Log)
+		}
+
 		tp.executeTxsRWMutex.RLock()
 		tp.executeTxs[uint8(pTx.batchOrder)][pTx.batchTxOrder] = execTx
 		tp.bitmap[uint8(pTx.batchOrder)+1]--

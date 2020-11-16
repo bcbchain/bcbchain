@@ -15,7 +15,7 @@ import (
 var importTemplate = `package {{.PackageName}}
 
 import (
-	"github.com/bcbchain/sdk/common/gls"
+	bcbgls "github.com/bcbchain/sdk/common/gls"
 	"github.com/bcbchain/sdk/sdk"
 	{{range $v,$vv := .Imports}}
 	{{$v.Name}} {{$v.Path}}{{end}}
@@ -89,7 +89,7 @@ func (intfc *InterfaceStub{{$.Index}}) {{$method.Name}}({{range $i0, $param := $
 	{{createVar $.Contracts $.ImportContract $method}}
 	
 	var response types3.Response
-	gls.Mgr.SetValues(gls.Values{gls.SDKKey: newSmc}, func() {
+	bcbgls.Mgr.SetValues(bcbgls.Values{bcbgls.SDKKey: newSmc}, func() {
 		response = intfc.stub.Invoke(methodID, rn)
 	})
     if response.Code != types.CodeOK {

@@ -530,6 +530,8 @@ func (conn *DeliverConnection) RunExecTx(tx *statedb2.Tx, params ...interface{})
 		invokeRes.ErrCode = bcerr.ErrorCode
 		invokeRes.ErrLog = bcerr.Error()
 	}
+	invokeRes.ErrCode = uint32(bcerrors.ErrCodeOK)
+	invokeRes.ErrLog = ""
 
 	return true, invokeRes
 }
@@ -541,7 +543,7 @@ func (conn *DeliverConnection) HandleResponse(
 	response stubapi.Response,
 	connV2 *deliver.AppDeliver) (resDeliverTx types.ResponseDeliverTx) {
 
-	if response.ErrCode != 0 {
+	if response.ErrCode != bcerrors.ErrCodeOK {
 		resDeliverTx = types.ResponseDeliverTx{
 			Code:     response.ErrCode,
 			Log:      response.ErrLog,
@@ -578,7 +580,8 @@ func (conn *DeliverConnection) HandleResponse(
 
 	conn.logger.Debug("deliverBCTx()", "resDeliverTx length", len(resDeliverTx.String()), "resDeliverTx", resDeliverTx.String())
 
-	stateTx, _ := tx.GetBuffer()
+	stateTx, _ := statedbhelper.CommitTx(tx.Transaction().ID(), tx.ID())
+	//stateTx, _ := tx.GetBuffer()
 
 	conn.logger.Debug("deliverBCTx() ", "stateTx length", len(stateTx), "stateTx ", string(stateTx))
 

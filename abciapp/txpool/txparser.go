@@ -147,9 +147,10 @@ func parseTxV2(chainID, txStr string) (
 		panic(err) //eof
 	}
 
-	if len(txV2.Note) > types2.MaxSizeNote {
-		panic("note is too long")
-	}
+	////todo 修改note过大的问题，不能panic
+	//if len(txV2.Note) > types2.MaxSizeNote {
+	//	panic("note is too long")
+	//}
 
 	rawTxV2 = &txV2
 	sender = pubKey.Address(chainID)
