@@ -432,7 +432,7 @@ func map2String(m map[smc.Address]uint64) string {
 	return b.String()
 }
 
-func (conn *DeliverConnection) RunExecTx(tx *statedb2.Tx, params ...interface{}) (doneSuccess bool, response interface{}) {
+func (conn *DeliverConnection) RunExecTx(tx *statedb2.Tx, params ...interface{}) (doneSuccess *bool, response interface{}) {
 
 	transaction := params[0].(bctx.Transaction)
 	fromAddr := params[1].(smc.Address)
@@ -479,8 +479,8 @@ func (conn *DeliverConnection) RunExecTx(tx *statedb2.Tx, params ...interface{})
 		res := response.(types.ResponseDeliverTx)
 		res.Code = bcError.ErrorCode
 		res.Log = bcError.Error()
-
-		return true, res
+		*doneSuccess = true
+		return doneSuccess, res
 	}
 
 	// Generate accounts and execute
@@ -531,8 +531,8 @@ func (conn *DeliverConnection) RunExecTx(tx *statedb2.Tx, params ...interface{})
 		invokeRes.ErrCode = bcerr.ErrorCode
 		invokeRes.ErrLog = bcerr.Error()
 	}
-
-	return true, invokeRes
+	*doneSuccess = true
+	return doneSuccess, invokeRes
 }
 
 func (conn *DeliverConnection) HandleResponse(

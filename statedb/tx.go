@@ -7,7 +7,7 @@ import (
 	"sync"
 )
 
-type TxFunction func(tx *Tx, params ...interface{}) (bool, interface{})
+type TxFunction func(tx *Tx, params ...interface{}) (*bool, interface{})
 
 type Tx struct {
 	txID    int64
@@ -19,7 +19,7 @@ type Tx struct {
 	txFunc        TxFunction
 	txParams      []interface{}
 	done          bool
-	doneSuccess   bool
+	doneSuccess   *bool
 	doneEvent     sync.WaitGroup
 	prevDoneEvent *sync.WaitGroup
 
@@ -86,7 +86,7 @@ func (tx *Tx) exec() {
 	}
 
 	//executing function of tx
-	if tx.doneSuccess == false {
+	if *tx.doneSuccess == false {
 		tx.doneSuccess, tx.response = tx.txFunc(tx, tx.txParams...)
 	}
 }
@@ -128,7 +128,7 @@ func (tx *Tx) Commit() ([]byte, map[string][]byte) {
 func (tx *Tx) Rollback() {
 	tx.reset()
 	tx.done = false
-	tx.doneSuccess = false
+	*tx.doneSuccess = false
 }
 
 func (tx *Tx) Response() interface{} {

@@ -82,8 +82,8 @@ func NewTx(transID int64) int64 {
 		panic("invalid transID")
 	}
 	trans := temp.(*Trans)
-
-	tx := trans.Transaction.NewTx(nil, false, nil)
+	var doneSuccess *bool
+	tx := trans.Transaction.NewTx(nil, doneSuccess, nil)
 	trans.TxMap.Store(tx.ID(), tx)
 	//trans.TxMap[tx.ID()] = tx
 	return tx.ID()
@@ -96,7 +96,7 @@ func NewTxConcurrency(transID int64, f statedb.TxFunction, doneSuccess *bool, re
 	}
 	trans := temp.(*Trans)
 
-	tx := trans.Transaction.NewTx(f, *doneSuccess, response, params...)
+	tx := trans.Transaction.NewTx(f, doneSuccess, response, params...)
 	trans.TxMap.Store(tx.ID(), tx)
 	//trans.TxMap[tx.ID()] = tx
 	return tx
