@@ -541,7 +541,7 @@ func (sdb *StateDB) NewTxState(contractAddress smc.Address, senderAddress smc.Ad
 		StateDB:         sdb,
 		ContractAddress: contractAddress,
 		SenderAddress:   senderAddress,
-		Tx:              sdb.Transaction.NewTx(nil, false, nil),
+		Tx:              sdb.Transaction.NewTx(nil, nil),
 	}
 }
 
