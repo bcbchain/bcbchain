@@ -2,6 +2,7 @@ package txpool
 
 import (
 	deliverV2 "github.com/bcbchain/bcbchain/abciapp/service/deliver"
+	"github.com/bcbchain/bcbchain/abciapp_v1.0/bcerrors"
 	"github.com/bcbchain/bcbchain/abciapp_v1.0/contract/stubapi"
 	deliverV1 "github.com/bcbchain/bcbchain/abciapp_v1.0/service/deliver"
 	bctx "github.com/bcbchain/bcbchain/abciapp_v1.0/tx/tx"
@@ -227,32 +228,38 @@ func (tp *txPool) createExecTxRoutine() {
 }
 
 func (tp *txPool) _createExecTxRoutine(pTx *ParseTx) {
+	var doneSuccess = false
 	if pTx.rawTxV1 != nil {
-		var response interface{}
+		var response = stubapi.Response{
+			ErrCode: bcerrors.ErrCodeOK,
+		}
 		//err := statedbhelper.SetAccountNonceEx(pTx.sender, pTx.rawTxV1.Nonce)
 		_, err := tp.deliverAppV1.GetStateDB().SetAccountNonce(pTx.sender, pTx.rawTxV1.Nonce) // 设置该账户的nonce值
 		if err != nil {
-			response = stubapi.Response{
-				Code: types.ErrDeliverTx,
-				Log:  "SetAccountNonce failed",
+			e := bcerrors.BCError{
+				ErrorCode: bcerrors.ErrCodeDeliverTxInvalidNonce,
 			}
+			response.ErrCode = e.ErrorCode
+			response.ErrLog = e.Error()
+			doneSuccess = true
 		}
-		execTx := statedbhelper.NewTxConcurrency(tp.transaction.ID(), tp.deliverAppV1.RunExecTx, response,
+		execTx := statedbhelper.NewTxConcurrency(tp.transaction.ID(), tp.deliverAppV1.RunExecTx, &doneSuccess, response,
 			*pTx.rawTxV1, pTx.sender, tp.transaction.ID())
 		tp.executeTxsRWMutex.RLock()
 		tp.executeTxs[uint8(pTx.batchOrder)][pTx.batchTxOrder] = execTx
 		tp.bitmap[uint8(pTx.batchOrder)+1]--
 		tp.executeTxsRWMutex.RUnlock()
 	} else if pTx.rawTxV2 != nil {
-		var response interface{}
-		var bcError = &types.BcError{}
-		execTx := statedbhelper.NewTxConcurrency(tp.transaction.ID(), tp.deliverAppV2.RunExecTx, response,
-			pTx.txHash, *pTx.rawTxV2, pTx.sender, pTx.pubKey, bcError)
+		var response = &types.Response{Code: types.CodeOK}
+		execTx := statedbhelper.NewTxConcurrency(tp.transaction.ID(), tp.deliverAppV2.RunExecTx, &doneSuccess, response,
+			pTx.txHash, *pTx.rawTxV2, pTx.sender, pTx.pubKey)
 
 		//检查该交易的note是否超出最大容量
 		if len(pTx.rawTxV2.Note) > types.MaxSizeNote {
 			res := tp.deliverAppV2.ReportFailure([]byte(pTx.txStr), types.ErrDeliverTx, "tx note is out of range")
-			bcError.Set(res.Code, res.Log)
+			response.Code = res.Code
+			response.Log = res.Log
+			doneSuccess = true
 		}
 
 		//设置交易发起者账户的nonce值
@@ -260,7 +267,9 @@ func (tp *txPool) _createExecTxRoutine(pTx *ParseTx) {
 		if err != nil {
 			tp.logger.Error("SetAccountNonce failed:", err)
 			res := tp.deliverAppV2.ReportFailure([]byte(pTx.txStr), types.ErrDeliverTx, "SetAccountNonce failed")
-			bcError.Set(res.Code, res.Log)
+			response.Code = res.Code
+			response.Log = res.Log
+			doneSuccess = true
 		}
 
 		tp.executeTxsRWMutex.RLock()

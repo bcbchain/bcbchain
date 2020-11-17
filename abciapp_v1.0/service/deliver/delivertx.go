@@ -524,14 +524,13 @@ func (conn *DeliverConnection) RunExecTx(tx *statedb2.Tx, params ...interface{})
 
 	//write response into hash
 	invokeRes, bcerr := conn.docker.Invoke(item, transID)
+	invokeRes.ErrCode = uint32(bcerrors.ErrCodeOK)
 	if bcerr.ErrorCode != bcerrors.ErrCodeOK {
 		conn.logger.Error("docker invoke error.....", "error", bcerr.Error())
 		txState.RollbackTx()
 		invokeRes.ErrCode = bcerr.ErrorCode
 		invokeRes.ErrLog = bcerr.Error()
 	}
-	invokeRes.ErrCode = uint32(bcerrors.ErrCodeOK)
-	invokeRes.ErrLog = ""
 
 	return true, invokeRes
 }
@@ -545,11 +544,11 @@ func (conn *DeliverConnection) HandleResponse(
 
 	if response.ErrCode != bcerrors.ErrCodeOK {
 		resDeliverTx = types.ResponseDeliverTx{
-			Code:     response.ErrCode,
-			Log:      response.ErrLog,
-			GasLimit: rawTxV1.GasLimit,
-			GasUsed:  response.GasUsed,
-			Fee:      response.GasPrice * response.GasUsed,
+			Code: response.ErrCode,
+			Log:  response.ErrLog,
+			//GasLimit: rawTxV1.GasLimit,
+			GasUsed: response.GasUsed,
+			Fee:     response.GasPrice * response.GasUsed,
 		}
 		conn.calcDeliverTxHash([]byte(txStr), &resDeliverTx, nil, connV2)
 		return

@@ -86,7 +86,9 @@ func (tx *Tx) exec() {
 	}
 
 	//executing function of tx
-	tx.doneSuccess, tx.response = tx.txFunc(tx, tx.txParams...)
+	if tx.doneSuccess == false {
+		tx.doneSuccess, tx.response = tx.txFunc(tx, tx.txParams...)
+	}
 }
 
 func (tx *Tx) commit() {

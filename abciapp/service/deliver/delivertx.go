@@ -744,16 +744,8 @@ func (app *AppDeliver) RunExecTx(tx *statedb.Tx, params ...interface{}) (doneSuc
 	transaction := params[1].(types2.Transaction)
 	sender := params[2].(types2.Address)
 	pubKey := params[3].(crypto.PubKeyEd25519)
-	bcError := params[4].(*types2.BcError)
 	app.logger.Info("Recv ABCI interface: DeliverTx", "tx", tx.ID(), "txHash", txHash.String())
-	errCode, errLog := bcError.Get()
-	if errCode != 0 || errLog != "" {
-		response = new(types2.Response)
-		resDeliverTx := response.(*types2.Response)
-		resDeliverTx.Code = errCode
-		resDeliverTx.Log = errLog
-		return true, resDeliverTx
-	}
+
 	adp := adapter.GetInstance()
 	invokeRes := adp.InvokeTx(app.blockHeader, app.transID, tx.ID(), sender, transaction, pubKey.Bytes(), txHash, app.blockHash)
 	if invokeRes.Code != types2.CodeOK {

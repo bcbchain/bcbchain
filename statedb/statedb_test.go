@@ -298,7 +298,7 @@ func testTxGetSet(c *C) {
 	defer sdb.Close()
 
 	ts := sdb.NewCommittableTransaction()
-	tx := ts.NewTx(nil)
+	tx := ts.NewTx(nil, false, nil)
 
 	for i := 0; i < 20; i++ {
 		temp := strconv.Itoa(i)
@@ -342,7 +342,7 @@ func testRollbackPanicMaxZero(c *C) {
 	for i := 0; i < 20; i++ {
 		temp := strconv.Itoa(i)
 		ts := sdb.NewCommittableTransaction()
-		tx := ts.NewTx(nil)
+		tx := ts.NewTx(nil, false, nil)
 
 		tx.Set("key"+temp, []byte("value"+temp))
 		tx.Commit()
@@ -364,7 +364,7 @@ func testRollbackPanic(c *C) {
 	for i := 0; i < 20; i++ {
 		temp := strconv.Itoa(i)
 		ts := sdb.NewCommittableTransaction()
-		tx := ts.NewTx(nil)
+		tx := ts.NewTx(nil, false, nil)
 
 		tx.Set("key"+temp, []byte("value"+temp))
 		tx.Commit()
@@ -381,7 +381,7 @@ func testRollbackNormal(c *C) {
 	for i := 0; i < 20; i++ {
 		temp := strconv.Itoa(i)
 		ts := sdb.NewCommittableTransaction()
-		tx := ts.NewTx(nil)
+		tx := ts.NewTx(nil, false, nil)
 
 		tx.Set("key"+temp, []byte("value"+temp))
 		tx.Commit()
