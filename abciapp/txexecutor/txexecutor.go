@@ -67,7 +67,17 @@ func (te *txExecutor) GetResponse() *types.ResponseDeliverTx {
 func (te *txExecutor) execRoutine() {
 	for {
 		execTxs := te.txPool.GetTxsExecPending() //获取一批解析好后的交易，数量不确定
-		te.transaction.GoBatchExec(execTxs)      //进入数据库中执行tx所带的执行函数
+
+		if te.haveV1Transaction(execTxs) == true {
+			// 存在v1版本交易时，当前分片按照串行方式执行
+			for _, execTx := range execTxs {
+				tempExecTxs := make([]*statedb.Tx, 0)
+				tempExecTxs = append(tempExecTxs, execTx)
+				te.transaction.GoBatchExec(tempExecTxs)
+			}
+		} else {
+			te.transaction.GoBatchExec(execTxs) //进入数据库中执行tx所带的执行函数
+		}
 
 		for _, execTx := range execTxs {
 			parseTx := te.txPool.GetParseTx(te.handleTxsNum)
@@ -107,9 +117,23 @@ func (te *txExecutor) SetTransaction(transactionID int64) {
 func (te *txExecutor) SetDeliverAppV1(deliverAppV1 *deliverV1.DeliverConnection) {
 	te.deliverAppV1 = deliverAppV1
 }
+
 func (te *txExecutor) TENET() {
 	state := statedbhelper.GetWorldAppState(0, 0)
 	txpool.ChainVerison = int(state.ChainVersion)
 	te.handleTxsNum = 0
 	te.txPool.TENET()
+}
+
+func (te *txExecutor) haveV1Transaction(execTxs []*statedb.Tx) bool {
+	tempHandleTxsNum := te.handleTxsNum
+	for range execTxs {
+		parseTx := te.txPool.GetParseTx(te.handleTxsNum)
+		tempHandleTxsNum++
+		if parseTx.RawTxV1() != nil {
+			return true
+		}
+	}
+
+	return false
 }

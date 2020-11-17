@@ -1,15 +1,15 @@
 package deliver
 
 import (
-	"github.com/bcbchain/bcbchain/abciapp_v1.0/bcerrors"
-	sdbtype "github.com/bcbchain/bcbchain/abciapp_v1.0/types"
-	"github.com/bcbchain/bclib/algorithm"
-	"github.com/bcbchain/bcbchain/common/statedbhelper"
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/bcbchain/bcbchain/abciapp_v1.0/bcerrors"
+	sdbtype "github.com/bcbchain/bcbchain/abciapp_v1.0/types"
+	"github.com/bcbchain/bcbchain/common/statedbhelper"
+	"github.com/bcbchain/bclib/algorithm"
 	abci "github.com/bcbchain/bclib/tendermint/abci/types"
 	"github.com/bcbchain/bclib/tendermint/go-crypto"
 	"golang.org/x/crypto/sha3"
@@ -51,7 +51,7 @@ func (conn *DeliverConnection) initChain(req abci.RequestInitChain) abci.Respons
 	stateDB.BeginBlock(transaction)
 	//In case error happens during init
 	//It's OK to call RollBlock() follows Commit()
-	defer stateDB.RollBlock()
+	//defer stateDB.RollBlock()
 
 	conn.stateDB.SetChainID(req.ChainId)
 
