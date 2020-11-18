@@ -479,6 +479,7 @@ func (conn *DeliverConnection) RunExecTx(tx *statedb2.Tx, params ...interface{})
 		res := response.(types.ResponseDeliverTx)
 		res.Code = bcError.ErrorCode
 		res.Log = bcError.Error()
+		doneSuccess = new(bool)
 		*doneSuccess = true
 		return doneSuccess, res
 	}
@@ -531,6 +532,7 @@ func (conn *DeliverConnection) RunExecTx(tx *statedb2.Tx, params ...interface{})
 		invokeRes.ErrCode = bcerr.ErrorCode
 		invokeRes.ErrLog = bcerr.Error()
 	}
+	doneSuccess = new(bool)
 	*doneSuccess = true
 	return doneSuccess, invokeRes
 }
