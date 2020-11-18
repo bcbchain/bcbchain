@@ -135,6 +135,6 @@ func (tx *Tx) Response() interface{} {
 	return tx.response
 }
 
-func (tx *Tx) SetDoneSuccess(doneSuccess bool) {
+func (tx *Tx) SetDoneSuccess(doneSuccess *bool) {
 	tx.doneSuccess = doneSuccess
 }
