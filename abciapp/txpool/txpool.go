@@ -228,7 +228,6 @@ func (tp *txPool) createExecTxRoutine() {
 }
 
 func (tp *txPool) _createExecTxRoutine(pTx *ParseTx) {
-	var doneSuccess = false
 	if pTx.rawTxV1 != nil {
 		var response = stubapi.Response{
 			ErrCode: bcerrors.ErrCodeOK,
@@ -241,17 +240,19 @@ func (tp *txPool) _createExecTxRoutine(pTx *ParseTx) {
 			}
 			response.ErrCode = e.ErrorCode
 			response.ErrLog = e.Error()
-			doneSuccess = true
 		}
-		execTx := statedbhelper.NewTxConcurrency(tp.transaction.ID(), tp.deliverAppV1.RunExecTx, &doneSuccess, response,
+		execTx := statedbhelper.NewTxConcurrency(tp.transaction.ID(), tp.deliverAppV1.RunExecTx, response,
 			*pTx.rawTxV1, pTx.sender, tp.transaction.ID())
+		if response.ErrCode != bcerrors.ErrCodeOK {
+			execTx.SetDoneSuccess(true)
+		}
 		tp.executeTxsRWMutex.RLock()
 		tp.executeTxs[uint8(pTx.batchOrder)][pTx.batchTxOrder] = execTx
 		tp.bitmap[uint8(pTx.batchOrder)+1]--
 		tp.executeTxsRWMutex.RUnlock()
 	} else if pTx.rawTxV2 != nil {
 		var response = &types.Response{Code: types.CodeOK}
-		execTx := statedbhelper.NewTxConcurrency(tp.transaction.ID(), tp.deliverAppV2.RunExecTx, &doneSuccess, response,
+		execTx := statedbhelper.NewTxConcurrency(tp.transaction.ID(), tp.deliverAppV2.RunExecTx, response,
 			pTx.txHash, *pTx.rawTxV2, pTx.sender, pTx.pubKey)
 
 		//检查该交易的note是否超出最大容量
@@ -259,7 +260,7 @@ func (tp *txPool) _createExecTxRoutine(pTx *ParseTx) {
 			res := tp.deliverAppV2.ReportFailure([]byte(pTx.txStr), types.ErrDeliverTx, "tx note is out of range")
 			response.Code = res.Code
 			response.Log = res.Log
-			doneSuccess = true
+			execTx.SetDoneSuccess(true)
 		}
 
 		//设置交易发起者账户的nonce值
@@ -269,7 +270,7 @@ func (tp *txPool) _createExecTxRoutine(pTx *ParseTx) {
 			res := tp.deliverAppV2.ReportFailure([]byte(pTx.txStr), types.ErrDeliverTx, "SetAccountNonce failed")
 			response.Code = res.Code
 			response.Log = res.Log
-			doneSuccess = true
+			execTx.SetDoneSuccess(true)
 		}
 
 		tp.executeTxsRWMutex.RLock()

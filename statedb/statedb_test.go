@@ -298,7 +298,7 @@ func testTxGetSet(c *C) {
 	defer sdb.Close()
 
 	ts := sdb.NewCommittableTransaction()
-	tx := ts.NewTx(nil, false, nil)
+	tx := ts.NewTx(nil, nil)
 
 	for i := 0; i < 20; i++ {
 		temp := strconv.Itoa(i)

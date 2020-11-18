@@ -134,3 +134,7 @@ func (tx *Tx) Rollback() {
 func (tx *Tx) Response() interface{} {
 	return tx.response
 }
+
+func (tx *Tx) SetDoneSuccess(doneSuccess bool) {
+	tx.doneSuccess = doneSuccess
+}
