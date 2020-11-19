@@ -737,7 +737,7 @@ func combineBuffer(nonceBuffer, txBuffer map[string][]byte) map[string][]byte {
 	return txBuffer
 }
 
-func (app *AppDeliver) RunExecTx(tx *statedb.Tx, params ...interface{}) (doneSuccess bool, response interface{}) {
+func (app *AppDeliver) RunExecTx(tx *statedb.Tx, params ...interface{}) (doneSuccess *bool, response interface{}) {
 
 	//doneSuccess = true
 	txHash := params[0].(common.HexBytes)
@@ -767,8 +767,9 @@ func (app *AppDeliver) RunExecTx(tx *statedb.Tx, params ...interface{}) (doneSuc
 	resDeliverTx.Tags = invokeRes.Tags
 	resDeliverTx.Height = invokeRes.Height
 	resDeliverTx.TxHash = invokeRes.TxHash
-
-	return true, resDeliverTx
+	doneSuccess = new(bool)
+	*doneSuccess = true
+	return doneSuccess, resDeliverTx
 }
 
 func (app *AppDeliver) HandleResponse(tx *statedb.Tx, txStr string, rawTxV2 *types2.Transaction, response *types2.Response) (resDeliverTx types.ResponseDeliverTx) {

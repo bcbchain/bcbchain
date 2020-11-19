@@ -82,21 +82,21 @@ func NewTx(transID int64) int64 {
 		panic("invalid transID")
 	}
 	trans := temp.(*Trans)
-
-	tx := trans.Transaction.NewTx(nil, nil)
+	var doneSuccess *bool
+	tx := trans.Transaction.NewTx(nil, doneSuccess, nil)
 	trans.TxMap.Store(tx.ID(), tx)
 	//trans.TxMap[tx.ID()] = tx
 	return tx.ID()
 }
 
-func NewTxConcurrency(transID int64, f statedb.TxFunction, response interface{}, params ...interface{}) *statedb.Tx {
+func NewTxConcurrency(transID int64, f statedb.TxFunction, doneSuccess *bool, response interface{}, params ...interface{}) *statedb.Tx {
 	temp, ok := transactionMap.Load(transID)
 	if !ok {
 		panic("invalid transID")
 	}
 	trans := temp.(*Trans)
 
-	tx := trans.Transaction.NewTx(f, response, params...)
+	tx := trans.Transaction.NewTx(f, doneSuccess, response, params...)
 	trans.TxMap.Store(tx.ID(), tx)
 	//trans.TxMap[tx.ID()] = tx
 	return tx

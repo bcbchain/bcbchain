@@ -124,8 +124,8 @@ func cmdStart(cmd *cobra.Command, args []string) error {
 
 	home := os.Getenv("HOME")
 	logger = tmlog.NewTMLogger(filepath.Join(home, "log"), "bcchain")
-	logger.AllowLevel(common.GlobalConfig.LogLevel)
-	//logger.AllowLevel("error")
+	//logger.AllowLevel(common.GlobalConfig.LogLevel)
+	logger.AllowLevel("debug")
 	logger.SetOutputAsync(common.GlobalConfig.LogAsync)
 	logger.SetOutputToFile(common.GlobalConfig.LogFile)
 	logger.SetOutputToScreen(common.GlobalConfig.LogScreen)
