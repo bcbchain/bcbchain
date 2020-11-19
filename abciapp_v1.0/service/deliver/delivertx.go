@@ -337,7 +337,7 @@ func (conn *DeliverConnection) parseTx(tx []byte) (fromAddr string, pubKey crypt
 	if !bFailed && len(transaction.Note) > bctx.MAX_SIZE_NOTE {
 		bFailed = true
 
-		bcError.ErrorCode = bcerrors.ErrCodeCheckTxNoteExceedLimit
+		bcError.ErrorCode = bcerrors.ErrCodeDeliverTxNoteExceedLimit
 		bcError.ErrorDesc = ""
 
 	}
@@ -549,6 +549,11 @@ func (conn *DeliverConnection) HandleResponse(
 			//GasLimit: rawTxV1.GasLimit,
 			GasUsed: response.GasUsed,
 			Fee:     response.GasPrice * response.GasUsed,
+		}
+
+		if response.ErrCode > bcerrors.ErrCodeDeliverTxNoteExceedLimit ||
+			response.ErrCode < bcerrors.ErrCodeDeliverTxTransData {
+			resDeliverTx.GasLimit = rawTxV1.GasLimit
 		}
 		conn.calcDeliverTxHash([]byte(txStr), &resDeliverTx, nil, connV2)
 		return
