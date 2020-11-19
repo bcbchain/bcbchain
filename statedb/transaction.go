@@ -27,7 +27,7 @@ func (trans *Transaction) ID() int64 {
 	return trans.transactionID
 }
 
-func (trans *Transaction) NewTx(f TxFunction, doneSuccess *bool, response interface{}, params ...interface{}) (tx *Tx) {
+func (trans *Transaction) NewTx(f TxFunction, response interface{}, params ...interface{}) (tx *Tx) {
 	tx = &Tx{
 		txID:        trans.calcTxID(),
 		wBuffer:     make(map[string][]byte),
@@ -38,7 +38,6 @@ func (trans *Transaction) NewTx(f TxFunction, doneSuccess *bool, response interf
 		txParams:    params,
 		transaction: trans,
 		response:    response,
-		doneSuccess: doneSuccess,
 	}
 	return
 }
@@ -164,7 +163,7 @@ func (trans *Transaction) mergeTxResult(txs []*Tx) []*Tx {
 			//conflict tx
 			tx.Rollback()
 			break
-		} else if *tx.doneSuccess {
+		} else if tx.doneSuccess {
 			trans.wBitsMerged = trans.wBitsMerged.Merge(tx.wBits)
 		} else {
 			// tx exec failed
@@ -174,7 +173,7 @@ func (trans *Transaction) mergeTxResult(txs []*Tx) []*Tx {
 
 	for i := 0; i <= last_no_conflict; i++ {
 		tx := txs[i]
-		if *tx.doneSuccess {
+		if tx.doneSuccess {
 			// only commit the tx exec succeed
 			tx.commit()
 		} else {
