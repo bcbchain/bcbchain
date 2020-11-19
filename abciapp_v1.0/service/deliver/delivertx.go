@@ -337,7 +337,7 @@ func (conn *DeliverConnection) parseTx(tx []byte) (fromAddr string, pubKey crypt
 	if !bFailed && len(transaction.Note) > bctx.MAX_SIZE_NOTE {
 		bFailed = true
 
-		bcError.ErrorCode = bcerrors.ErrCodeCheckTxNoteExceedLimit
+		bcError.ErrorCode = bcerrors.ErrCodeDeliverTxNoteExceedLimit
 		bcError.ErrorDesc = ""
 
 	}
@@ -432,12 +432,13 @@ func map2String(m map[smc.Address]uint64) string {
 	return b.String()
 }
 
-func (conn *DeliverConnection) RunExecTx(tx *statedb2.Tx, params ...interface{}) (doneSuccess *bool, response interface{}) {
+func (conn *DeliverConnection) RunExecTx(tx *statedb2.Tx, params ...interface{}) (doneSuccess bool, response interface{}) {
 
 	transaction := params[0].(bctx.Transaction)
 	fromAddr := params[1].(smc.Address)
 	transID := params[2].(int64)
 
+	doneSuccess = true
 	var bcError smc.Error
 	var bFailed bool
 
@@ -479,8 +480,6 @@ func (conn *DeliverConnection) RunExecTx(tx *statedb2.Tx, params ...interface{})
 		res := response.(types.ResponseDeliverTx)
 		res.Code = bcError.ErrorCode
 		res.Log = bcError.Error()
-		doneSuccess = new(bool)
-		*doneSuccess = true
 		return doneSuccess, res
 	}
 
@@ -532,8 +531,6 @@ func (conn *DeliverConnection) RunExecTx(tx *statedb2.Tx, params ...interface{})
 		invokeRes.ErrCode = bcerr.ErrorCode
 		invokeRes.ErrLog = bcerr.Error()
 	}
-	doneSuccess = new(bool)
-	*doneSuccess = true
 	return doneSuccess, invokeRes
 }
 
@@ -551,6 +548,11 @@ func (conn *DeliverConnection) HandleResponse(
 			//GasLimit: rawTxV1.GasLimit,
 			GasUsed: response.GasUsed,
 			Fee:     response.GasPrice * response.GasUsed,
+		}
+
+		if response.ErrCode > bcerrors.ErrCodeDeliverTxNoteExceedLimit ||
+			response.ErrCode < bcerrors.ErrCodeDeliverTxTransData {
+			resDeliverTx.GasLimit = rawTxV1.GasLimit
 		}
 		conn.calcDeliverTxHash([]byte(txStr), &resDeliverTx, nil, connV2)
 		return

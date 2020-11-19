@@ -3,8 +3,8 @@ package deliver
 import (
 	"container/list"
 	"fmt"
-	tx2 "github.com/bcbchain/bclib/tx/v2"
 	"github.com/bcbchain/bclib/algorithm"
+	tx2 "github.com/bcbchain/bclib/tx/v2"
 	"github.com/bcbchain/bclib/types"
 	"github.com/bcbchain/sdk/sdk/bn"
 	"github.com/bcbchain/sdk/sdk/jsoniter"
@@ -45,7 +45,8 @@ func TestAppDeliver_emitFeeReceipts(t *testing.T) {
 		TxHash:   nil,
 		Height:   0,
 	}
-	tags,_ := app.emitFeeReceipts(types.Transaction{},&response, true)
+	fmt.Println(response)
+	tags, _ := app.emitFeeReceipts(types.Transaction{}, nil, true)
 	//verify
 	if len(tags) != num+q {
 		t.Error("number of total fee receipt is wrong", "got: ", len(tags), "exp: ", num+q)
@@ -62,7 +63,7 @@ func TestAppDeliver_emitFeeReceipts(t *testing.T) {
 
 	fmt.Println("test emitFeeReceipts(false)")
 	//failure
-	tags,_ = app.emitFeeReceipts(types.Transaction{},&response, false)
+	tags, _ = app.emitFeeReceipts(types.Transaction{}, nil, false)
 	//verify
 	if len(tags) != q {
 		t.Error("number of total fee receipt is wrong", "got: ", len(tags), "exp: ", q)

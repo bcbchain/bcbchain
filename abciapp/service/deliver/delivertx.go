@@ -737,7 +737,7 @@ func combineBuffer(nonceBuffer, txBuffer map[string][]byte) map[string][]byte {
 	return txBuffer
 }
 
-func (app *AppDeliver) RunExecTx(tx *statedb.Tx, params ...interface{}) (doneSuccess *bool, response interface{}) {
+func (app *AppDeliver) RunExecTx(tx *statedb.Tx, params ...interface{}) (doneSuccess bool, response interface{}) {
 
 	//doneSuccess = true
 	txHash := params[0].(common.HexBytes)
@@ -746,6 +746,7 @@ func (app *AppDeliver) RunExecTx(tx *statedb.Tx, params ...interface{}) (doneSuc
 	pubKey := params[3].(crypto.PubKeyEd25519)
 	app.logger.Info("Recv ABCI interface: DeliverTx", "tx", tx.ID(), "txHash", txHash.String())
 
+	doneSuccess = true
 	adp := adapter.GetInstance()
 	invokeRes := adp.InvokeTx(app.blockHeader, app.transID, tx.ID(), sender, transaction, pubKey.Bytes(), txHash, app.blockHash)
 	if invokeRes.Code != types2.CodeOK {
@@ -767,8 +768,6 @@ func (app *AppDeliver) RunExecTx(tx *statedb.Tx, params ...interface{}) (doneSuc
 	resDeliverTx.Tags = invokeRes.Tags
 	resDeliverTx.Height = invokeRes.Height
 	resDeliverTx.TxHash = invokeRes.TxHash
-	doneSuccess = new(bool)
-	*doneSuccess = true
 	return doneSuccess, resDeliverTx
 }
 
