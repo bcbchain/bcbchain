@@ -256,8 +256,7 @@ func (tp *txPool) _createExecTxRoutine(pTx *ParseTx) {
 
 		//检查该交易的note是否超出最大容量
 		if len(pTx.rawTxV2.Note) > types.MaxSizeNote {
-			tp.logger.Error("tx note is out of range")
-			response.Code = types.ErrMaxSizeNote
+			response.Code = types.ErrDeliverTx
 			response.Log = "tx note is out of range"
 			execTx.SetDoneSuccess(true)
 		}
@@ -265,9 +264,8 @@ func (tp *txPool) _createExecTxRoutine(pTx *ParseTx) {
 		//设置交易发起者账户的nonce值
 		_, err := statedbhelper.SetAccountNonceEx(pTx.sender, pTx.rawTxV2.Nonce, execTx.ID())
 		if err != nil {
-			tp.logger.Error("createExecTxRoutine", "SetAccountNonce failed", err)
-			response.Code = types.ErrNonce
-			response.Log = "tx note is out of range"
+			response.Code = types.ErrDeliverTx
+			response.Log = "SetAccountNonce failed"
 			execTx.SetDoneSuccess(true)
 		}
 
