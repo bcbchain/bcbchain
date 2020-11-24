@@ -8,6 +8,7 @@ import (
 )
 
 type TxFunction func(tx *Tx, params ...interface{}) (bool, interface{})
+type RollbackFunction func(transID, txID int64)
 
 type Tx struct {
 	txID    int64
@@ -16,6 +17,7 @@ type Tx struct {
 	wBits   *conflictBits
 	rBits   *conflictBits
 
+	rollbackFunc  RollbackFunction
 	txFunc        TxFunction
 	txParams      []interface{}
 	done          bool

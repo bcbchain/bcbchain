@@ -27,17 +27,18 @@ func (trans *Transaction) ID() int64 {
 	return trans.transactionID
 }
 
-func (trans *Transaction) NewTx(f TxFunction, response interface{}, params ...interface{}) (tx *Tx) {
+func (trans *Transaction) NewTx(r RollbackFunction, f TxFunction, response interface{}, params ...interface{}) (tx *Tx) {
 	tx = &Tx{
-		txID:        trans.calcTxID(),
-		wBuffer:     make(map[string][]byte),
-		rBuffer:     make(map[string][]byte),
-		wBits:       newConflictBits(maxTxCount * 256),
-		rBits:       newConflictBits(maxTxCount * 256),
-		txFunc:      f,
-		txParams:    params,
-		transaction: trans,
-		response:    response,
+		txID:         trans.calcTxID(),
+		wBuffer:      make(map[string][]byte),
+		rBuffer:      make(map[string][]byte),
+		wBits:        newConflictBits(maxTxCount * 256),
+		rBits:        newConflictBits(maxTxCount * 256),
+		rollbackFunc: r,
+		txFunc:       f,
+		txParams:     params,
+		transaction:  trans,
+		response:     response,
 	}
 	return
 }
@@ -48,17 +49,7 @@ func (trans *Transaction) calcTxID() int64 {
 
 func (trans *Transaction) Get(key string) []byte {
 	var err error
-	//value := make([]byte, 0)
 	ok := false
-	//if value, ok = trans.wBuffer[key]; !ok {
-	// if value, ok = trans.rBuffer.get(key); !ok {
-	//    value, err = trans.stateDB.sdb.Get([]byte(key))
-	//    if err != nil {
-	//       panic(err)
-	//    }
-	//    trans.rBuffer.set(key, value)
-	// }
-	//}
 	var value interface{}
 	if value, ok = trans.wBuffer.Load(key); !ok {
 		if value, ok = trans.rBuffer.get(key); !ok {
@@ -74,13 +65,11 @@ func (trans *Transaction) Get(key string) []byte {
 
 func (trans *Transaction) Set(key string, value []byte) {
 	trans.wBuffer.Store(key, value)
-	//trans.wBuffer[key] = value
 }
 
 func (trans *Transaction) BatchSet(data map[string][]byte) {
 	for k, v := range data {
 		trans.wBuffer.Store(k, v)
-		//trans.wBuffer[k] = v
 	}
 }
 
@@ -121,8 +110,8 @@ func (trans *Transaction) exec(txs []*Tx) []*Tx {
 		return nil
 	}
 
-	trans.wBitsMerged = subtxs[0].wBits
 	for subtxs != nil {
+		trans.wBitsMerged = subtxs[0].wBits
 		subtxs = trans._exec(subtxs)
 	}
 
@@ -161,7 +150,7 @@ func (trans *Transaction) mergeTxResult(txs []*Tx) []*Tx {
 		tx := txs[i]
 		if tx.rBits.IsConflictTo(trans.wBitsMerged) {
 			//conflict tx
-			tx.Rollback()
+			tx.rollbackFunc(trans.transactionID, tx.txID)
 			break
 		} else if tx.doneSuccess {
 			trans.wBitsMerged = trans.wBitsMerged.Merge(tx.wBits)
@@ -196,7 +185,6 @@ func (trans *Transaction) Commit() {
 	trans.checkID()
 
 	batch := trans.stateDB.sdb.NewBatch()
-	//originData := make(map[string][]byte, len(trans.wBuffer))
 	var lenTranswbuffer int
 	trans.wBuffer.Range(func(key, value interface{}) bool {
 		if key != nil {
@@ -205,23 +193,6 @@ func (trans *Transaction) Commit() {
 		return true
 	})
 	originData := make(map[string][]byte, lenTranswbuffer)
-	//
-	//for k, v := range trans.wBuffer {
-	//
-	// // get origin data
-	// if value, err := trans.stateDB.sdb.Get([]byte(k)); err != nil {
-	//    panic(err)
-	// } else {
-	//    originData[k] = value
-	// }
-	//
-	// // set new data to state db
-	// if len(v) == 0 {
-	//    batch.Delete([]byte(k))
-	// } else {
-	//    batch.Set([]byte(k), v)
-	// }
-	//}
 
 	trans.wBuffer.Range(func(k, v interface{}) bool {
 		// get origin data
@@ -241,7 +212,6 @@ func (trans *Transaction) Commit() {
 	})
 
 	// snapshot
-	//trans.stateDB.snapshot.commit(trans.transactionID, originData, trans.wBuffer)
 	var wBuffer = make(map[string][]byte, lenTranswbuffer)
 	trans.wBuffer.Range(func(key, value interface{}) bool {
 		wBuffer[key.(string)] = value.([]byte)
@@ -267,7 +237,6 @@ func (trans *Transaction) Commit() {
 }
 
 func (trans *Transaction) Rollback() {
-	//trans.wBuffer = make(map[string][]byte)
 	trans.wBuffer = new(sync.Map)
 	trans.rBuffer = newKVbuffer(trans.rBuffer.maxCacheSize)
 
@@ -278,9 +247,6 @@ func (trans *Transaction) Rollback() {
 
 func (trans *Transaction) GetBuffer() []byte {
 	var keys []string
-	//for k := range trans.wBuffer {
-	// keys = append(keys, k)
-	//}
 	trans.wBuffer.Range(func(k, v interface{}) bool {
 		keys = append(keys, k.(string))
 		return true
@@ -289,7 +255,6 @@ func (trans *Transaction) GetBuffer() []byte {
 
 	var buf bytes.Buffer
 	for _, k := range keys {
-		//v := trans.wBuffer[k]
 		v, _ := trans.wBuffer.Load(k)
 		buf.Write([]byte(k))
 		buf.Write(v.([]byte))

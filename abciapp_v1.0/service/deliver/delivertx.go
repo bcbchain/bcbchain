@@ -455,7 +455,6 @@ func (conn *DeliverConnection) RunExecTx(tx *statedb2.Tx, params ...interface{})
 			SenderAddress:   fromAddr,
 			Tx:              tx,
 		}
-		//txState = conn.stateDB.NewTxState(transaction.To, fromAddr)
 
 		// Get contract detailed information depends on contract address
 		contract, err = conn.stateDB.GetContract(transaction.To)

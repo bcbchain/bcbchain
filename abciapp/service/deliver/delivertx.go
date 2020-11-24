@@ -739,7 +739,6 @@ func combineBuffer(nonceBuffer, txBuffer map[string][]byte) map[string][]byte {
 
 func (app *AppDeliver) RunExecTx(tx *statedb.Tx, params ...interface{}) (doneSuccess bool, response interface{}) {
 
-	//doneSuccess = true
 	txHash := params[0].(common.HexBytes)
 	transaction := params[1].(types2.Transaction)
 	sender := params[2].(types2.Address)
@@ -823,7 +822,7 @@ func (app *AppDeliver) HandleResponse(tx *statedb.Tx, txStr string, rawTxV2 *typ
 	app.logger.Debug("deliverBCTx()", "resDeliverTx length", len(resDeliverTxStr), "resDeliverTx", resDeliverTxStr) // log value of async instance must be immutable to avoid data race
 
 	stateTx, _ := statedbhelper.CommitTx(app.transID, tx.ID())
-	//stateTx, _ := tx.GetBuffer()
+
 	app.logger.Debug("deliverBCTx() ", "stateTx length", len(stateTx), "stateTx ", string(stateTx))
 
 	app.calcDeliverHash([]byte(txStr), &resDeliverTx, stateTx)
@@ -834,4 +833,10 @@ func (app *AppDeliver) HandleResponse(tx *statedb.Tx, txStr string, rawTxV2 *typ
 	app.logger.Debug("end deliver invoke.....")
 
 	return resDeliverTx
+}
+
+func (app *AppDeliver) RollbackTx(transID, txID int64) {
+	adp := adapter.GetInstance()
+	statedbhelper.RollbackTx(transID, txID)
+	adp.RollbackTx(transID, txID)
 }

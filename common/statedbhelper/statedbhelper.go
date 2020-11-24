@@ -74,20 +74,19 @@ func NewTx(transID int64) int64 {
 		panic("invalid transID")
 	}
 	trans := temp.(*Trans)
-	var doneSuccess *bool
-	tx := trans.Transaction.NewTx(nil, doneSuccess, nil)
+	tx := trans.Transaction.NewTx(nil, nil, nil, nil)
 	trans.TxMap.Store(tx.ID(), tx)
 	return tx.ID()
 }
 
-func NewTxConcurrency(transID int64, f statedb.TxFunction, response interface{}, params ...interface{}) *statedb.Tx {
+func NewTxConcurrency(transID int64, r statedb.RollbackFunction, f statedb.TxFunction, response interface{}, params ...interface{}) *statedb.Tx {
 	temp, ok := transactionMap.Load(transID)
 	if !ok {
 		panic("invalid transID")
 	}
 	trans := temp.(*Trans)
 
-	tx := trans.Transaction.NewTx(f, response, params...)
+	tx := trans.Transaction.NewTx(r, f, response, params...)
 	trans.TxMap.Store(tx.ID(), tx)
 	return tx
 }
@@ -403,7 +402,6 @@ func RollbackTx(transID, txID int64) {
 	if ok == false {
 		panic("RollbackTx failed")
 	}
-	//tx := trans.TxMap[txID]
 	tx.(*statedb.Tx).Rollback()
 }
 

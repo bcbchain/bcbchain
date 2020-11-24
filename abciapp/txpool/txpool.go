@@ -240,7 +240,7 @@ func (tp *txPool) _createExecTxRoutine(pTx *ParseTx) {
 			response.ErrCode = e.ErrorCode
 			response.ErrLog = e.Error()
 		}
-		execTx := statedbhelper.NewTxConcurrency(tp.transaction.ID(), tp.deliverAppV1.RunExecTx, response,
+		execTx := statedbhelper.NewTxConcurrency(tp.transaction.ID(), statedbhelper.RollbackTx, tp.deliverAppV1.RunExecTx, response,
 			*pTx.rawTxV1, pTx.sender, tp.transaction.ID())
 		if response.ErrCode != bcerrors.ErrCodeOK {
 			execTx.SetDoneSuccess(true)
@@ -251,7 +251,7 @@ func (tp *txPool) _createExecTxRoutine(pTx *ParseTx) {
 		tp.executeTxsRWMutex.RUnlock()
 	} else if pTx.rawTxV2 != nil {
 		var response = &types.Response{Code: types.CodeOK}
-		execTx := statedbhelper.NewTxConcurrency(tp.transaction.ID(), tp.deliverAppV2.RunExecTx, response,
+		execTx := statedbhelper.NewTxConcurrency(tp.transaction.ID(), tp.deliverAppV2.RollbackTx, tp.deliverAppV2.RunExecTx, response,
 			pTx.txHash, *pTx.rawTxV2, pTx.sender, pTx.pubKey)
 
 		//检查该交易的note是否超出最大容量
