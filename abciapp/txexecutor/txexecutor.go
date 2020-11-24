@@ -74,38 +74,45 @@ func (te *txExecutor) execRoutine() {
 				tempExecTxs := make([]*statedb.Tx, 0)
 				tempExecTxs = append(tempExecTxs, execTx)
 				te.transaction.GoBatchExec(tempExecTxs)
+
+				parseTx := te.txPool.GetParseTx(te.handleTxsNum)
+				te.handleTxsNum++
+				te.handleResponse(execTx, parseTx)
 			}
 		} else {
 			te.transaction.GoBatchExec(execTxs) //进入数据库中执行tx所带的执行函数
-		}
 
-		for _, execTx := range execTxs {
-			parseTx := te.txPool.GetParseTx(te.handleTxsNum)
-			te.handleTxsNum++
-			if parseTx.RawTxV1() != nil {
-				var connV2 *deliverV2.AppDeliver
-				if txpool.ChainVerison == 2 {
-					connV2 = te.deliverAppV2
-				}
-				resDeliverTx := te.deliverAppV1.HandleResponse(
-					execTx,
-					parseTx.TxStr(),
-					parseTx.RawTxV1(),
-					execTx.Response().(stubapi.Response),
-					connV2,
-				)
-				te.responsesChan <- resDeliverTx
-			} else if parseTx.RawTxV2() != nil {
-				resDeliverTx := te.deliverAppV2.HandleResponse(
-					execTx,
-					parseTx.TxStr(),
-					parseTx.RawTxV2(),
-					execTx.Response().(*types2.Response),
-				)
-				te.responsesChan <- resDeliverTx
+			for _, execTx := range execTxs {
+				parseTx := te.txPool.GetParseTx(te.handleTxsNum)
+				te.handleTxsNum++
+				te.handleResponse(execTx, parseTx)
 			}
 		}
+	}
+}
 
+func (te *txExecutor) handleResponse(execTx *statedb.Tx, parseTx *txpool.ParseTx) {
+	if parseTx.RawTxV1() != nil {
+		var connV2 *deliverV2.AppDeliver
+		if txpool.ChainVerison == 2 {
+			connV2 = te.deliverAppV2
+		}
+		resDeliverTx := te.deliverAppV1.HandleResponse(
+			execTx,
+			parseTx.TxStr(),
+			parseTx.RawTxV1(),
+			execTx.Response().(stubapi.Response),
+			connV2,
+		)
+		te.responsesChan <- resDeliverTx
+	} else if parseTx.RawTxV2() != nil {
+		resDeliverTx := te.deliverAppV2.HandleResponse(
+			execTx,
+			parseTx.TxStr(),
+			parseTx.RawTxV2(),
+			execTx.Response().(*types2.Response),
+		)
+		te.responsesChan <- resDeliverTx
 	}
 }
 
@@ -128,7 +135,7 @@ func (te *txExecutor) TENET() {
 func (te *txExecutor) haveV1Transaction(execTxs []*statedb.Tx) bool {
 	tempHandleTxsNum := te.handleTxsNum
 	for range execTxs {
-		parseTx := te.txPool.GetParseTx(te.handleTxsNum)
+		parseTx := te.txPool.GetParseTx(tempHandleTxsNum)
 		tempHandleTxsNum++
 		if parseTx.RawTxV1() != nil {
 			return true
