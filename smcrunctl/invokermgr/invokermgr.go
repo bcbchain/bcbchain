@@ -143,7 +143,7 @@ func (im *InvokerMgr) InvokeTx(
 	var gasUsed, fee int64
 	var url string
 	var err types.BcError
-	urls := make([]string, 0, len(tx.Messages))
+	var urls []string
 	addrOfNewContract := make([]string, 0, len(tx.Messages))
 	for index, message := range tx.Messages {
 		payer, e := im.getPayer(blockHeader.Height, sender, tx, index)
@@ -156,7 +156,7 @@ func (im *InvokerMgr) InvokeTx(
 
 		// 无论失败与成功，均将收据和Fee等数据返回给调用者
 		// 调用者是 checker将会把无用数据丢弃， deliver根据手续费收据从发送者账户扣除手续费
-		if len(urls) != 0 && !inSlice(url, urls) {
+		if url != "" && !inSlice(url, urls) {
 			urls = append(urls, url)
 		}
 		// 在收据前部加上message序号
