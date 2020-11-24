@@ -275,8 +275,7 @@ func (app *AppDeliver) emitFeeReceipts(transaction types2.Transaction, inPutTags
 	app.logger.Debug("get fee receipts", "receipts", mapFee2String(fees))
 	totalFeeReceipts, err := emitTotalFeeReceipt(fees)
 	if err != nil {
-		app.logger.Error("emit fee receipt failed", "error", err.Error())
-		return nil, 0
+		panic(fmt.Sprintf("emit fee receipt failed: %v", err))
 	}
 
 	// if transaction was succeed, save response tags
@@ -317,8 +316,7 @@ func (app *AppDeliver) EmitFeeReceipts(transaction types2.Transaction, response 
 	app.logger.Debug("get fee receipts", "receipts", mapFee2String(fees))
 	totalFeeReceipts, err := emitTotalFeeReceipt(fees)
 	if err != nil {
-		app.logger.Error("emit fee receipt failed", "error", err.Error())
-		return nil, 0
+		panic(fmt.Sprintf("emit fee receipt failed: %v", err))
 	}
 	// if transaction was succeed, save response tags
 	if isDlvOK {
@@ -774,28 +772,21 @@ func (app *AppDeliver) HandleResponse(tx *statedb.Tx, txStr string, rawTxV2 *typ
 	response *types2.Response) (resDeliverTx types.ResponseDeliverTx) {
 	app.logger.Info("Recv ABCI interface: HandleResponse", "tx", tx.ID(), "txHash", common.HexBytes(algorithm.CalcCodeHash(txStr)))
 	app.SetTxID(tx.ID())
-	if response.Code == types2.ErrMaxSizeNote { //处理note长度过长问题
-		res := app.ReportFailure([]byte(txStr), types2.ErrDeliverTx, "tx note is out of range")
-		resDeliverTx.Code = res.Code
-		resDeliverTx.Log = res.Log
-		resDeliverTxStr := resDeliverTx.String()
-		app.logger.Debug("deliverBCTx()", "resDeliverTx length", len(resDeliverTxStr), "resDeliverTx", resDeliverTxStr) // log value of async instance must be immutable to avoid data race
-		return resDeliverTx
+
+	//note过长或SetNonce失败错误处理
+	if response.Code == types2.ErrDeliverTx {
+		res := app.ReportFailure([]byte(txStr), types2.ErrDeliverTx, response.Log)
+		resDeliverTxStr := res.String()
+		app.logger.Error("deliverBCTx()", "resDeliverTx length", len(resDeliverTxStr), "resDeliverTx", resDeliverTxStr) // log value of async instance must be immutable to avoid data race
+		return res
 	}
-	if response.Code == types2.ErrNonce { //处理账户nonce值错误问题
-		res := app.ReportFailure([]byte(txStr), types2.ErrDeliverTx, "SetAccountNonce failed")
-		resDeliverTx.Code = res.Code
-		resDeliverTx.Log = res.Log
-		resDeliverTxStr := resDeliverTx.String()
-		app.logger.Debug("deliverBCTx()", "resDeliverTx length", len(resDeliverTxStr), "resDeliverTx", resDeliverTxStr) // log value of async instance must be immutable to avoid data race
-		return resDeliverTx
-	}
+
 	if response.Code != types2.CodeOK { //处理docker执行失败的问题
 		var totalFee int64
 		resDeliverTx, _, totalFee = app.reportInvokeFailure([]byte(txStr), *rawTxV2, response)
 		resDeliverTx.Fee = uint64(totalFee)
 		resDeliverTxStr := resDeliverTx.String()
-		app.logger.Debug("deliverBCTx()", "resDeliverTx length", len(resDeliverTxStr), "resDeliverTx", resDeliverTxStr) // log value of async instance must be immutable to avoid data race
+		app.logger.Error("deliverBCTx()", "resDeliverTx length", len(resDeliverTxStr), "resDeliverTx", resDeliverTxStr) // log value of async instance must be immutable to avoid data race
 		return resDeliverTx
 	}
 
