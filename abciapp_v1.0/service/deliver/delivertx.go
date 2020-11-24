@@ -438,6 +438,8 @@ func (conn *DeliverConnection) RunExecTx(tx *statedb2.Tx, params ...interface{})
 	fromAddr := params[1].(smc.Address)
 	transID := params[2].(int64)
 
+	conn.logger.Info("RunExecTx", "transID", transID, "txID", tx.ID(), "sender", fromAddr)
+
 	doneSuccess = true
 	var bcError smc.Error
 	var bFailed bool
@@ -540,6 +542,8 @@ func (conn *DeliverConnection) HandleResponse(
 	rawTxV1 *bctx.Transaction,
 	response stubapi.Response,
 	connV2 *deliver.AppDeliver) (resDeliverTx types.ResponseDeliverTx) {
+
+	conn.logger.Info("HandleResponse", "txID", tx.ID())
 
 	if response.ErrCode != bcerrors.ErrCodeOK {
 		resDeliverTx = types.ResponseDeliverTx{
