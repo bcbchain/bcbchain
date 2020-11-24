@@ -28,13 +28,7 @@ var (
 type Trans struct {
 	Transaction *statedb.Transaction
 	TxMap       *sync.Map
-	//TxMap       map[int64]*statedb.Tx // txID => *statedb2.Tx
-
 }
-
-//func Init(sdbName string, maxSnapshotCount int) {
-//	stateDB = statedb.New(sdbName, maxSnapshotCount)
-//}
 
 func Init(sdbName string, maxSnapshotCount int) {
 	stateDB = statedb.New(sdbName, maxSnapshotCount)
@@ -51,7 +45,6 @@ func NewCommittableTransactionID() (int64, *statedb.Transaction) {
 	transactionMap.Store(transaction.ID(), &Trans{
 		Transaction: transaction,
 		TxMap:       new(sync.Map),
-		//TxMap:       make(map[int64]*statedb.Tx),
 	})
 
 	return transaction.ID(), transaction
@@ -63,7 +56,6 @@ func NewRollbackTransactionID() (int64, *statedb.Transaction) {
 	transactionMap.Store(transaction.ID(), &Trans{
 		Transaction: transaction,
 		TxMap:       new(sync.Map),
-		//TxMap:       make(map[int64]*statedb.Tx),
 	})
 	return transaction.ID(), transaction
 }
@@ -85,7 +77,6 @@ func NewTx(transID int64) int64 {
 	var doneSuccess *bool
 	tx := trans.Transaction.NewTx(nil, doneSuccess, nil)
 	trans.TxMap.Store(tx.ID(), tx)
-	//trans.TxMap[tx.ID()] = tx
 	return tx.ID()
 }
 
@@ -98,7 +89,6 @@ func NewTxConcurrency(transID int64, f statedb.TxFunction, response interface{},
 
 	tx := trans.Transaction.NewTx(f, response, params...)
 	trans.TxMap.Store(tx.ID(), tx)
-	//trans.TxMap[tx.ID()] = tx
 	return tx
 }
 
@@ -275,10 +265,6 @@ func CheckOrgInfo(transID, txID int64, orgID, orgAddr string) bool {
 		panic("state db helper check org info err: " + err.Error())
 	}
 
-	//if strings.Compare(orgAddr, orgDev.OrgOwner) == 0 {
-	//	return false
-	//}
-
 	return true
 }
 
@@ -437,8 +423,6 @@ func CommitTx(transID, txID int64) ([]byte, map[string][]byte) {
 	if ok == false {
 		panic("CommitTx failed")
 	}
-	//tx := trans.TxMap[txID]
-	//return tx.Commit()
 	return tx.(*statedb.Tx).Commit()
 }
 
@@ -908,10 +892,8 @@ func get(transID, txID int64, key string) []byte {
 	}
 	trans := temp.(*Trans)
 
-	//tx, ok := trans.TxMap[txID]
 	tx, ok2 := trans.TxMap.Load(txID)
 	if ok2 {
-		//value := tx.Get(key)
 		value := tx.(*statedb.Tx).Get(key)
 		if len(value) != 0 {
 			return value
@@ -928,14 +910,10 @@ func set(transID, txID int64, key string, value []byte) {
 		panic("invalid transID")
 	}
 	trans := temp.(*Trans)
-
-	//var tx *statedb.Tx
-	//tx, ok = trans.TxMap[txID]
 	tx, ok2 := trans.TxMap.Load(txID)
 	if !ok2 {
 		panic(fmt.Sprintf("invalid txID: %d", txID))
 	}
-	//tx.Set(key, value)
 	tx.(*statedb.Tx).Set(key, value)
 }
 
@@ -946,13 +924,10 @@ func batchSet(transID, txID int64, data map[string][]byte) {
 	}
 	trans := temp.(*Trans)
 
-	//var tx *statedb.Tx
-	//tx, ok = trans.TxMap[txID]
 	tx, ok2 := trans.TxMap.Load(txID)
 	if !ok2 {
 		panic(fmt.Sprintf("invalid txID: %d", txID))
 	}
-	//tx.BatchSet(data)
 	tx.(*statedb.Tx).BatchSet(data)
 }
 

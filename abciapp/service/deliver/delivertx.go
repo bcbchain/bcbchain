@@ -744,9 +744,8 @@ func (app *AppDeliver) RunExecTx(tx *statedb.Tx, params ...interface{}) (doneSuc
 	transaction := params[1].(types2.Transaction)
 	sender := params[2].(types2.Address)
 	pubKey := params[3].(crypto.PubKeyEd25519)
-	app.logger.Info("Recv ABCI interface: DeliverTx", "tx", tx.ID(), "txHash", txHash.String())
+	app.logger.Info("Recv ABCI interface: RunExecTx", "tx", tx.ID(), "txHash", txHash.String())
 
-	doneSuccess = true
 	adp := adapter.GetInstance()
 	invokeRes := adp.InvokeTx(app.blockHeader, app.transID, tx.ID(), sender, transaction, pubKey.Bytes(), txHash, app.blockHash)
 	if invokeRes.Code != types2.CodeOK {
@@ -768,20 +767,36 @@ func (app *AppDeliver) RunExecTx(tx *statedb.Tx, params ...interface{}) (doneSuc
 	resDeliverTx.Tags = invokeRes.Tags
 	resDeliverTx.Height = invokeRes.Height
 	resDeliverTx.TxHash = invokeRes.TxHash
+	doneSuccess = true
 	return doneSuccess, resDeliverTx
 }
 
-func (app *AppDeliver) HandleResponse(tx *statedb.Tx, txStr string, rawTxV2 *types2.Transaction, response *types2.Response) (resDeliverTx types.ResponseDeliverTx) {
+func (app *AppDeliver) HandleResponse(tx *statedb.Tx, txStr string, rawTxV2 *types2.Transaction,
+	response *types2.Response) (resDeliverTx types.ResponseDeliverTx) {
+	app.logger.Info("Recv ABCI interface: HandleResponse", "tx", tx.ID(), "txHash", common.HexBytes(algorithm.CalcCodeHash(txStr)))
 	app.SetTxID(tx.ID())
-	if response.Code == types2.ErrDeliverTx {
-		resDeliverTx.Code = response.Code
-		resDeliverTx.Log = response.Log
+	if response.Code == types2.ErrMaxSizeNote { //处理note长度过长问题
+		res := app.ReportFailure([]byte(txStr), types2.ErrDeliverTx, "tx note is out of range")
+		resDeliverTx.Code = res.Code
+		resDeliverTx.Log = res.Log
+		resDeliverTxStr := resDeliverTx.String()
+		app.logger.Debug("deliverBCTx()", "resDeliverTx length", len(resDeliverTxStr), "resDeliverTx", resDeliverTxStr) // log value of async instance must be immutable to avoid data race
 		return resDeliverTx
 	}
-	if response.Code != types2.CodeOK {
+	if response.Code == types2.ErrNonce { //处理账户nonce值错误问题
+		res := app.ReportFailure([]byte(txStr), types2.ErrDeliverTx, "SetAccountNonce failed")
+		resDeliverTx.Code = res.Code
+		resDeliverTx.Log = res.Log
+		resDeliverTxStr := resDeliverTx.String()
+		app.logger.Debug("deliverBCTx()", "resDeliverTx length", len(resDeliverTxStr), "resDeliverTx", resDeliverTxStr) // log value of async instance must be immutable to avoid data race
+		return resDeliverTx
+	}
+	if response.Code != types2.CodeOK { //处理docker执行失败的问题
 		var totalFee int64
 		resDeliverTx, _, totalFee = app.reportInvokeFailure([]byte(txStr), *rawTxV2, response)
 		resDeliverTx.Fee = uint64(totalFee)
+		resDeliverTxStr := resDeliverTx.String()
+		app.logger.Debug("deliverBCTx()", "resDeliverTx length", len(resDeliverTxStr), "resDeliverTx", resDeliverTxStr) // log value of async instance must be immutable to avoid data race
 		return resDeliverTx
 	}
 

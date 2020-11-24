@@ -232,7 +232,6 @@ func (tp *txPool) _createExecTxRoutine(pTx *ParseTx) {
 		var response = stubapi.Response{
 			ErrCode: bcerrors.ErrCodeOK,
 		}
-		//err := statedbhelper.SetAccountNonceEx(pTx.sender, pTx.rawTxV1.Nonce)
 		_, err := tp.deliverAppV1.GetStateDB().SetAccountNonce(pTx.sender, pTx.rawTxV1.Nonce) // 设置该账户的nonce值
 		if err != nil {
 			e := bcerrors.BCError{
@@ -257,19 +256,18 @@ func (tp *txPool) _createExecTxRoutine(pTx *ParseTx) {
 
 		//检查该交易的note是否超出最大容量
 		if len(pTx.rawTxV2.Note) > types.MaxSizeNote {
-			res := tp.deliverAppV2.ReportFailure([]byte(pTx.txStr), types.ErrDeliverTx, "tx note is out of range")
-			response.Code = res.Code
-			response.Log = res.Log
+			tp.logger.Error("tx note is out of range")
+			response.Code = types.ErrMaxSizeNote
+			response.Log = "tx note is out of range"
 			execTx.SetDoneSuccess(true)
 		}
 
 		//设置交易发起者账户的nonce值
 		_, err := statedbhelper.SetAccountNonceEx(pTx.sender, pTx.rawTxV2.Nonce, execTx.ID())
 		if err != nil {
-			tp.logger.Error("SetAccountNonce failed:", err)
-			res := tp.deliverAppV2.ReportFailure([]byte(pTx.txStr), types.ErrDeliverTx, "SetAccountNonce failed")
-			response.Code = res.Code
-			response.Log = res.Log
+			tp.logger.Error("createExecTxRoutine", "SetAccountNonce failed", err)
+			response.Code = types.ErrNonce
+			response.Log = "tx note is out of range"
 			execTx.SetDoneSuccess(true)
 		}
 
