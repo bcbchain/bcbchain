@@ -41,6 +41,7 @@ func (trans *Transaction) NewTx(r RollbackFunction, f TxFunction, response inter
 		txParams:     params,
 		transaction:  trans,
 		response:     response,
+		preResult:    true,
 	}
 	return
 }

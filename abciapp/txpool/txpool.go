@@ -243,7 +243,7 @@ func (tp *txPool) _createExecTxRoutine(pTx *ParseTx) {
 		execTx := statedbhelper.NewTxConcurrency(tp.transaction.ID(), statedbhelper.RollbackTx, tp.deliverAppV1.RunExecTx, response,
 			*pTx.rawTxV1, pTx.sender, tp.transaction.ID())
 		if response.ErrCode != bcerrors.ErrCodeOK {
-			execTx.SetDoneSuccess(true)
+			execTx.SetPreResult(false)
 		}
 		tp.executeTxsRWMutex.RLock()
 		tp.executeTxs[uint8(pTx.batchOrder)][pTx.batchTxOrder] = execTx
@@ -258,7 +258,7 @@ func (tp *txPool) _createExecTxRoutine(pTx *ParseTx) {
 		if len(pTx.rawTxV2.Note) > types.MaxSizeNote {
 			response.Code = types.ErrDeliverTx
 			response.Log = "tx note is out of range"
-			execTx.SetDoneSuccess(true)
+			execTx.SetPreResult(false)
 		}
 
 		//设置交易发起者账户的nonce值
@@ -266,7 +266,7 @@ func (tp *txPool) _createExecTxRoutine(pTx *ParseTx) {
 		if err != nil {
 			response.Code = types.ErrDeliverTx
 			response.Log = "SetAccountNonce failed"
-			execTx.SetDoneSuccess(true)
+			execTx.SetPreResult(false)
 		}
 
 		tp.executeTxsRWMutex.RLock()

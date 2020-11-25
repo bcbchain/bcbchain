@@ -3,7 +3,6 @@ package statedb
 import (
 	"bytes"
 	"errors"
-	"github.com/bcbchain/bclib/types"
 	"sort"
 	"sync"
 )
@@ -23,6 +22,7 @@ type Tx struct {
 	txParams      []interface{}
 	done          bool
 	doneSuccess   bool
+	preResult     bool // 保存预处理结果
 	doneEvent     sync.WaitGroup
 	prevDoneEvent *sync.WaitGroup
 
@@ -89,7 +89,7 @@ func (tx *Tx) exec() {
 	}
 
 	//executing function of tx
-	if tx.doneSuccess == false {
+	if tx.preResult == true {
 		tx.doneSuccess, tx.response = tx.txFunc(tx, tx.txParams...)
 	}
 }
@@ -131,18 +131,13 @@ func (tx *Tx) Commit() ([]byte, map[string][]byte) {
 func (tx *Tx) Rollback() {
 	tx.reset()
 	tx.done = false
-	if tx.response.(*types.Response).Code == types.ErrDeliverTx {
-		tx.doneSuccess = true
-	} else {
-		tx.doneSuccess = false
-	}
-
+	tx.doneSuccess = false
 }
 
 func (tx *Tx) Response() interface{} {
 	return tx.response
 }
 
-func (tx *Tx) SetDoneSuccess(doneSuccess bool) {
-	tx.doneSuccess = doneSuccess
+func (tx *Tx) SetPreResult(preResult bool) {
+	tx.preResult = preResult
 }
