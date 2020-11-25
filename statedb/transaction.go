@@ -150,7 +150,11 @@ func (trans *Transaction) mergeTxResult(txs []*Tx) []*Tx {
 		tx := txs[i]
 		if tx.rBits.IsConflictTo(trans.wBitsMerged) {
 			//conflict tx
-			tx.rollbackFunc(trans.transactionID, tx.txID)
+			for j := i; j < len(txs); j++ {
+				rollbacktx := txs[j]
+				rollbacktx.rollbackFunc(trans.transactionID, rollbacktx.txID)
+			}
+			//tx.rollbackFunc(trans.transactionID, tx.txID)
 			break
 		} else if tx.doneSuccess {
 			trans.wBitsMerged = trans.wBitsMerged.Merge(tx.wBits)
