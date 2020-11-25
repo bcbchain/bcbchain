@@ -12,15 +12,17 @@ import (
 const maxTxCount = 2000
 
 type Transaction struct {
-	transactionID  int64
-	stateDB        *StateDB
-	committable    bool
-	maxTxCount     int
-	goRoutineCount int
-	wBuffer        *sync.Map
-	wBitsMerged    *conflictBits
-	rBuffer        *kvBuffer
-	lastTxID       int64
+	transactionID       int64
+	stateDB             *StateDB
+	committable         bool
+	maxTxCount          int
+	goRoutineCount      int
+	wBuffer             *sync.Map
+	wBitsMerged         *conflictBits
+	rBuffer             *kvBuffer
+	lastTxID            int64
+	wBufferSnapshot     map[string][]byte
+	wBitsMergedSnapshot conflictBits
 }
 
 func (trans *Transaction) ID() int64 {
@@ -110,9 +112,20 @@ func (trans *Transaction) exec(txs []*Tx) []*Tx {
 		return nil
 	}
 
-	for subtxs != nil {
-		trans.wBitsMerged = subtxs[0].wBits
-		subtxs = trans._exec(subtxs)
+	//for subtxs != nil {
+	//	//trans.wBitsMerged = subtxs[0].wBits
+	//	subtxs = trans._exec(subtxs)
+	//}
+	trans.TakeSnapshot()
+	trans.wBitsMerged = subtxs[0].wBits
+	subtxs = trans._exec(subtxs)
+	if subtxs != nil {
+		trans.RecoverySnapshot()
+		for _, tx := range subtxs {
+			rollbackTxs := make([]*Tx, 0)
+			rollbackTxs = append(rollbackTxs, tx)
+			trans._exec(rollbackTxs)
+		}
 	}
 
 	return append(make([]*Tx, 0), txs[goNum:]...)
@@ -150,11 +163,10 @@ func (trans *Transaction) mergeTxResult(txs []*Tx) []*Tx {
 		tx := txs[i]
 		if tx.rBits.IsConflictTo(trans.wBitsMerged) {
 			//conflict tx
-			for j := i; j < len(txs); j++ {
-				rollbacktx := txs[j]
+			for _, rollbacktx := range txs {
 				rollbacktx.rollbackFunc(trans.transactionID, rollbacktx.txID)
 			}
-			//tx.rollbackFunc(trans.transactionID, tx.txID)
+			last_no_conflict = -1
 			break
 		} else if tx.doneSuccess {
 			trans.wBitsMerged = trans.wBitsMerged.Merge(tx.wBits)
@@ -176,7 +188,7 @@ func (trans *Transaction) mergeTxResult(txs []*Tx) []*Tx {
 	if last_no_conflict == len(txs)-1 {
 		return nil
 	} else {
-		return append(make([]*Tx, 0), txs[last_no_conflict+1:]...)
+		return append(make([]*Tx, 0), txs...)
 	}
 }
 
@@ -286,4 +298,26 @@ func (trans *Transaction) checkID() {
 			panic(fmt.Sprintf("transaction ID must be last transaction ID plus one, ID:%d, last ID %d", trans.transactionID, lastID))
 		}
 	}
+}
+
+// Take a Snapshot
+func (trans *Transaction) TakeSnapshot() {
+	trans.wBitsMergedSnapshot.ensure_memory()
+	trans.wBitsMergedSnapshot = *trans.wBitsMerged
+	trans.wBuffer.Range(func(key, value interface{}) bool {
+		trans.wBufferSnapshot[key.(string)] = value.([]byte)
+		return true
+	})
+}
+
+// Recovery from Snapshot
+func (trans *Transaction) RecoverySnapshot() {
+	trans.wBuffer.Range(func(key, value interface{}) bool {
+		trans.wBuffer.Delete(key)
+		return true
+	})
+	for key, value := range trans.wBufferSnapshot {
+		trans.wBuffer.Store(key, value)
+	}
+	trans.wBitsMerged = &trans.wBitsMergedSnapshot
 }

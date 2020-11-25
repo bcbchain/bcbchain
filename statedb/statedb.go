@@ -79,13 +79,15 @@ func (s *StateDB) NewCommittableTransaction() *Transaction {
 		panic("must commit last transaction")
 	}
 	trans := &Transaction{
-		transactionID:  s.calcTransactionID(true),
-		stateDB:        s,
-		wBuffer:        new(sync.Map),
-		rBuffer:        newKVbuffer(uint(64 * 256)),
-		wBitsMerged:    newConflictBits(2000 * 256),
-		committable:    true,
-		goRoutineCount: (runtime.NumCPU() / 4) * 3,
+		transactionID:       s.calcTransactionID(true),
+		stateDB:             s,
+		wBuffer:             new(sync.Map),
+		rBuffer:             newKVbuffer(uint(64 * 256)),
+		wBitsMerged:         newConflictBits(2000 * 256),
+		wBufferSnapshot:     make(map[string][]byte),
+		wBitsMergedSnapshot: *newConflictBits(2000 * 256),
+		committable:         true,
+		goRoutineCount:      (runtime.NumCPU() / 4) * 3,
 	}
 	s.committableTransaction = trans
 	return trans
@@ -94,13 +96,13 @@ func (s *StateDB) NewCommittableTransaction() *Transaction {
 func (s *StateDB) NewRollbackTransaction() *Transaction {
 
 	return &Transaction{
-		transactionID: s.calcTransactionID(false),
-		stateDB:       s,
-		//wBuffer:        make(map[string][]byte),
-		wBuffer:        new(sync.Map),
-		rBuffer:        newKVbuffer(uint(1 * 256)), // TODO
-		committable:    false,
-		goRoutineCount: runtime.NumCPU() - 4,
+		transactionID:   s.calcTransactionID(false),
+		stateDB:         s,
+		wBuffer:         new(sync.Map),
+		wBufferSnapshot: make(map[string][]byte),
+		rBuffer:         newKVbuffer(uint(1 * 256)), // TODO
+		committable:     false,
+		goRoutineCount:  (runtime.NumCPU() / 4) * 3,
 	}
 }
 

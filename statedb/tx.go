@@ -3,6 +3,7 @@ package statedb
 import (
 	"bytes"
 	"errors"
+	"github.com/bcbchain/bclib/types"
 	"sort"
 	"sync"
 )
@@ -130,7 +131,12 @@ func (tx *Tx) Commit() ([]byte, map[string][]byte) {
 func (tx *Tx) Rollback() {
 	tx.reset()
 	tx.done = false
-	tx.doneSuccess = false
+	if tx.response.(*types.Response).Code == types.ErrDeliverTx {
+		tx.doneSuccess = true
+	} else {
+		tx.doneSuccess = false
+	}
+
 }
 
 func (tx *Tx) Response() interface{} {
