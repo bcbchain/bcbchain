@@ -15,6 +15,6 @@ require (
 	github.com/spf13/viper v1.7.0
 	github.com/stretchr/testify v1.5.1
 	github.com/tmthrgd/go-hex v0.0.0-20190303111820-0bdcb15db631
-	golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37
+	golang.org/x/crypto v0.1.0
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f
 )
